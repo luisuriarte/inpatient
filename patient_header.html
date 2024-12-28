@@ -1,0 +1,28 @@
+
+     <!-- Información del Paciente Seleccionado -->
+     <div class="patient-card">
+        <div class="patient-header">
+            <h3><?php echo xl('Selected Patient'); ?>: <span class="patient-name"><?php echo htmlspecialchars($title_patient_name); ?></span></h3>
+        </div>
+        <div class="patient-detail">
+            <i class="fas fa-id-badge patient-icon"></i>
+            <div class="patient-text"><?php echo xl('External ID'); ?>: <?php echo htmlspecialchars($title_patient_dni); ?></div>
+        </div>
+        <div class="patient-detail">
+            <i class="fas fa-birthday-cake patient-icon"></i>
+            <div class="patient-text"><?php echo xl('Age'); ?>: <?php echo htmlspecialchars($title_patient_age); ?> <?php echo xl('years'); ?></div>
+        </div>
+        <div class="patient-detail">
+            <i class="fas fa-venus-mars patient-icon"></i>
+            <div class="patient-text"><?php echo xl('Sex'); ?>: <?php echo xlt($title_patient_sex); ?></div>
+        </div>
+        <div class="patient-detail">
+            <i class="fas fa-shield-alt patient-icon"></i>
+            <div class="patient-text"><?php echo xl('Insurance'); ?>: <?php echo htmlspecialchars($title_insurance_name); ?></div>
+        </div>
+        <div class="patient-detail">
+            <i class="fas fa-user-md patient-icon"></i>
+            <div class="patient-text"><?php echo xl('Current User'); ?>: <?php echo htmlspecialchars($userFullName); ?></div>
+        </div>
+    </div> 
+

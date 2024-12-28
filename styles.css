@@ -1,0 +1,573 @@
+.centro-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.centro-icon {
+    text-align: center;
+    cursor: pointer;
+}
+.centro-icon img {
+    width: 100px;
+    height: 100px;
+}
+
+/* Estilo para los nombres de las facilities */
+.centro-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 8px;
+	font-family: 'Arial', sans-serif;
+}
+
+/* Estilo para las leyendas de desactivado */
+.centro-inactive {
+    font-size: 14px;
+    color: #888;
+}
+/* Estilo para las leyendas de desactivado */
+.centro-active {
+    font-size: 14px;
+    color: #888;
+}
+.unit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.unit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Unidades */
+.unit-icon {
+    width: 50px;
+    height: 50px;
+}
+.unit-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.unit-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.unit-inactive {
+    font-size: 14px;
+    color: #888;
+}
+
+.room-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.room {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Unidades */
+.room-icon {
+    width: 50px;
+    height: 50px;
+}
+.room-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.room-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.room-inactive {
+    font-size: 14px;
+    color: #888;
+}
+::-webkit-meter-even-less-good-value
+
+.bed-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Camas */
+.bed-icon {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+}
+.bed-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.bed-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.bed-inactive {
+    font-size: 14px;
+    color: #888;
+}
+/* Filas de las Camas */
+.bed-row:nth-child(even) {
+    background-color: #f7f7f7;
+}
+.bed-row:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+/* Botones de acción */
+.btn-group a {
+    margin-left: 10px;
+}
+
+/* Botones de acción */
+.btn-group a {
+    margin-left: 10px;
+}
+
+/* Estilos para la ventana emergente */
+.warning-popup {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: #ffcc00;
+padding: 20px;
+border-radius: 10px;
+box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+z-index: 1000;
+text-align: center;
+}
+.warning-popup p {
+    margin: 0 0 15px;
+}
+.warning-popup button {
+    background-color: orange;
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.warning-popup button:hover {
+    background-color: #e69500;
+}
+
+/* Personalización de la casilla de verificación */
+.custom-checkbox {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+.custom-checkbox input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: #28a745;
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title {
+    font-size: 20px;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+body {
+    background-color: #fdfdfd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.icon-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+.btn-custom {
+    border-radius: 12px;
+    padding: 15px;
+    width: 180px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+.btn-custom:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+.patient-info {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+.btn-primary-custom {
+    background-color: #007bff;
+    color: #fff;
+}
+.btn-secondary-custom {
+    background-color: #28a745;
+    color: #fff;
+}
+.btn-danger-custom {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.patient-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    background: var(--background-color);
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.patient-detail {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.patient-icon {
+    font-size: 28px;
+    color: #007bff;
+}
+.patient-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+}
+.patient-header {
+    text-align: center;
+    flex-basis: 100%;
+    margin-bottom: 15px;
+}
+.patient-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.facility-card, .unit-card, .room-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.facility-card:hover, .unit-card:hover, .room-card:hover {
+    transform: scale(1.05);
+}
+.card-title {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.facility-card .card-title {
+    flex: 1;
+    text-align: left; /* Alinear el título a la izquierda */
+}
+
+.count-left {
+    text-align: left; /* Alinear el conteo a la izquierda */
+    position: relative;
+    left: 50%; /* Mover el conteo hacia la mitad de la tarjeta */
+    transform: translateX(-50%); /* Centrar el inicio del conteo desde la mitad */
+}
+
+/* Estilo para el contenedor del switch */
+.custom-slider-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espacio entre el slider y el texto */
+}
+
+/* Estilo base para el switch */
+.custom-slider-switch input[type="checkbox"] {
+    appearance: none; /* Oculta el checkbox original */
+    width: 50px;
+    height: 25px;
+    background-color: #ccc;
+    border-radius: 50px;
+    position: relative;
+    outline: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+/* Estilo para el estado marcado (checked) */
+.custom-slider-switch input[type="checkbox"]:checked {
+    background-color: #66bb6a; /* Color del slider cuando está activo */
+}
+
+/* Círculo dentro del switch */
+.custom-slider-switch input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    transition: transform 0.3s;
+}
+
+/* Posición del círculo cuando está marcado */
+.custom-slider-switch input[type="checkbox"]:checked::before {
+    transform: translate(24px, -50%); /* Mueve el círculo hacia la derecha */
+}
+
+/* Estilo para el texto a la izquierda del switch */
+.custom-slider-switch label {
+    margin-bottom: 0; /* Alineación vertical del texto */
+}
+
+/* Estilo personalizado para reducir el tamaño de los eventos Vis.js MAR*/
+.vis-item {
+    position: top;
+    width: 10px;
+    height: 10px;
+    background-color: #007bff;
+    border: 0px;
+    margin-top: -15px;
+    display: inline-block;
+    z-index: 1;
+    overflow: hidden;
+}
+.vis-item.alarm1 {
+    background-color: orange;
+    margin-top: -15px;
+}
+.vis-item.alarm2 {
+    background-color: red;
+    margin-top: -15px;
+}
+.vis-item.vis-line {
+    padding: 0;
+    position: absolute;
+    width: 0;
+    border-left-width: 0px;
+    border-left-style: solid;
+    pointer-events: none;
+}
+ .vis-labelset {
+    background-color: lightcyan;
+}
+
+:root {
+    --background-color: <?php echo $backgroundPatientCard; ?>;
+}
+
+.bed-card {
+    font-size: 0.8rem;
+}
+.bed-card .card-title {
+    font-size: 1.2rem;
+}
+.bed-card .card-text {
+    font-size: 0.9rem;
+}
+.btn {
+    font-size: 0.8rem;
+}
+.conditions img {
+    width: 100px;
+    height: 100px;
+    margin-right: 5px;
+}
+/* Estilo para el contenedor de cuidado del paciente */
+.patient-care {
+    display: flex;
+    flex-direction: column; /* Asegura que los elementos dentro de .patient-care se apilen verticalmente */
+    align-items: center; /* Centra los elementos */
+}
+
+/* Estilo para el icono de cuidado del paciente */
+.care-icon {
+    width: 100px; /* Ajusta el tamaño según sea necesario */
+    height: auto;
+    margin-bottom: 5px; /* Espacio entre el icono y el texto */
+}
+
+/* Estilo para el título del cuidado del paciente */
+.patient-care span {
+    font-weight: bold;
+}
+.text-center {
+    text-align: center; /* Asegura la alineación central de contenido dentro del contenedor */
+}
+/* Clase para reducir el interlineado en la tarjeta */
+.compact-card .card-text,
+.compact-card .card-title {
+    line-height: 1.1; /* Reduce el espacio entre líneas */
+    margin-bottom: 4px; /* Ajusta el margen inferior de los párrafos si es necesario */
+}
+
+.compact-card .card-title {
+    margin-bottom: 6px; /* Ajuste específico para el título */
+    font-size: 1.1rem; /* Ajuste opcional del tamaño de fuente */
+}
+/* Clase para reducir interlineado y márgenes */
+.minimal-spacing {
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+/* Clase para reducir los espacios entre las tarjetas */
+.compact-card {
+    margin-bottom: 8px; /* Ajusta el margen inferior entre tarjetas */
+}
+
+/* Ajusta los paddings internos de la tarjeta */
+.compact-card .card-body {
+    padding: 8px; /* Ajusta el padding interno de las tarjetas */
+}
+
+/* Reduce los márgenes entre títulos y el contenido */
+.compact-card .card-title {
+    margin-bottom: 4px; /* Ajusta el margen inferior de los títulos de tarjeta */
+}
+
+/* Ajusta el espaciado de los párrafos dentro de las tarjetas */
+.card-text {
+    margin-bottom: 2px; /* Ajusta el margen inferior de los párrafos */
+    line-height: 1.2; /* Ajusta el espaciado entre líneas del texto */
+}
+
+/* Ajuste para hacer más cortos los dropdowns */
+.form-select {
+    max-width: 90%; /* Reducir el tamaño del dropdown */
+}
+/* Estilo de dropdowns */
+#facility_id {
+    background-color: #ffcccc; /* Rojo suave de fondo */
+    height: 35px; /* Ajustar la altura */
+    font-size: 14px; /* Tamaño de fuente */
+    width: 200px; /* Ancho fijo para cada dropdown */
+    text-align: center; /* Centrar texto dentro del dropdown */
+} 
+#unit_id {
+    background-color: #ccffcc; /* Verde suave de fondo */
+    height: 35px; /* Ajustar la altura */
+    font-size: 14px; /* Tamaño de fuente */
+    width: 200px; /* Ancho fijo para cada dropdown */
+    text-align: center; /* Centrar texto dentro del dropdown */
+}
+
+#room_id {
+    background-color: #cce5ff; /* Azul suave de fondo */
+    height: 35px; /* Ajustar la altura */
+    font-size: 14px; /* Tamaño de fuente */
+    width: 200px; /* Ancho fijo para cada dropdown */
+    text-align: center; /* Centrar texto dentro del dropdown */
+}
+
+/* Alineación de los elementos en el formulario */
+.form-row {
+    display: flex;
+    justify-content: space-between; /* Coloca los dropdowns más cerca */
+    gap: 10px; /* Espacio entre los dropdowns */
+}
+
+/* Ajuste para los labels */
+.form-label {
+    display: block; /* Hace que el label ocupe una línea completa */
+    text-align: center; /* Centrar el texto del label */
+    margin-bottom: 5px; /* Espacio debajo de los labels */
+}
+
+/* Ajuste para los select para que estén centrados dentro del div */
+.form-select {
+    margin: 0 auto; /* Centrar el dropdown dentro del contenedor */
+}
+
+.blinking {
+    animation: blinkingEffect 1s infinite;
+}
+
+@keyframes blinkingEffect {
+    0% { background-color: red; }
+    50% { background-color: transparent; }
+    100% { background-color: red; }
+}
+.alarm1 {
+    border-left: 5px solid #ff9900; /* Color de borde para la alarma 1 */
+}
+.alarm2 {
+    border-left: 5px solid #e3f309; /* Color de borde para la alarma 2 */
+}

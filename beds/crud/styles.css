@@ -1,0 +1,245 @@
+.centro-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.centro-icon {
+    text-align: center;
+    cursor: pointer;
+}
+.centro-icon img {
+    width: 100px;
+    height: 100px;
+}
+
+/* Estilo para los nombres de las facilities */
+.centro-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 8px;
+	font-family: 'Arial', sans-serif;
+}
+
+/* Estilo para las leyendas de desactivado */
+.centro-inactive {
+    font-size: 14px;
+    color: #888;
+}
+/* Estilo para las leyendas de desactivado */
+.centro-active {
+    font-size: 14px;
+    color: #888;
+}
+.unit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.unit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Unidades */
+.unit-icon {
+    width: 50px;
+    height: 50px;
+}
+.unit-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.unit-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.unit-inactive {
+    font-size: 14px;
+    color: #888;
+}
+
+.room-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.room {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Unidades */
+.room-icon {
+    width: 50px;
+    height: 50px;
+}
+.room-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.room-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.room-inactive {
+    font-size: 14px;
+    color: #888;
+}
+::-webkit-meter-even-less-good-value
+
+.bed-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+/* Icono de Camas */
+.bed-icon {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+}
+.bed-icon img {
+    width: 50px;
+    height: 50px;
+    /* border: 1px solid red;  /* Borde para verificar espacio reservado */
+}
+
+.bed-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.bed-inactive {
+    font-size: 14px;
+    color: #888;
+}
+/* Filas de las Camas */
+.bed-row:nth-child(even) {
+    background-color: #f7f7f7;
+}
+.bed-row:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+/* Botones de acción */
+.btn-group a {
+    margin-left: 10px;
+}
+
+/* Botones de acción */
+.btn-group a {
+    margin-left: 10px;
+}
+
+/* Estilos para la ventana emergente */
+.warning-popup {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: #ffcc00;
+padding: 20px;
+border-radius: 10px;
+box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+z-index: 1000;
+text-align: center;
+}
+.warning-popup p {
+    margin: 0 0 15px;
+}
+.warning-popup button {
+    background-color: orange;
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.warning-popup button:hover {
+    background-color: #e69500;
+}
+
+/* Personalización de la casilla de verificación */
+.custom-checkbox {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+.custom-checkbox input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: #28a745;
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title {
+    font-size: 20px;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
