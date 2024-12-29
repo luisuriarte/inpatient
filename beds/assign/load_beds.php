@@ -51,11 +51,11 @@ switch ($bedAction) {
 // Obtener las camas del cuarto seleccionado
 $bedPatients = getBedsPatientsData($roomId);
 
-echo '<pre>'; // Opcional: Formatea la salida para facilitar la lectura
-var_dump($beds);
-echo '</pre>';
-echo 'Bed Action: ' . $bedAction;
-?>
+//echo '<pre>'; // Opcional: Formatea la salida para facilitar la lectura
+//var_dump($beds);
+//echo '</pre>';
+//echo 'Bed Action: ' . $bedAction;
+//?>
 
 <!DOCTYPE html>
 <html lang="es">
