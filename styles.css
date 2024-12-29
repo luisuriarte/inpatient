@@ -404,6 +404,7 @@ body {
     width: 10px;
     height: 10px;
     background-color: #007bff;
+    border-radius: 50%;
     border: 0px;
     margin-top: -15px;
     display: inline-block;
@@ -425,9 +426,30 @@ body {
     border-left-width: 0px;
     border-left-style: solid;
     pointer-events: none;
-}
- .vis-labelset {
+} 
+.vis-labelset {
     background-color: lightcyan;
+}
+.vis-item.vis-dot.alarm1.vis-readonly {
+    width: 2px;
+    height: 10px;
+    background-color: red;
+    border: 0px;
+    margin-top: 0px;
+}
+.vis-item.vis-dot.alarm2.vis-readonly {
+    width: 2px;
+    height: 10px;
+    background-color: red;
+    border: 0px;
+    margin-top: 0px;
+}
+.vis-item.vis-dot.vis-readonly {
+    width: 2px;
+    height:10px;
+    background-color: red;
+    border: 0px;
+    margin-top: 0px;
 }
 
 :root {
@@ -564,10 +586,4 @@ body {
     0% { background-color: red; }
     50% { background-color: transparent; }
     100% { background-color: red; }
-}
-.alarm1 {
-    border-left: 5px solid #ff9900; /* Color de borde para la alarma 1 */
-}
-.alarm2 {
-    border-left: 5px solid #e3f309; /* Color de borde para la alarma 2 */
 }
