@@ -430,21 +430,21 @@ body {
 .vis-labelset {
     background-color: lightcyan;
 }
-.vis-item.vis-dot.alarm1.vis-readonly {
+.vis-item.vis-box.alarm1.vis-readonly {
     width: 2px;
     height: 10px;
     background-color: red;
     border: 0px;
     margin-top: 0px;
 }
-.vis-item.vis-dot.alarm2.vis-readonly {
+.vis-item.vis-box.alarm2.vis-readonly {
     width: 2px;
     height: 10px;
     background-color: red;
     border: 0px;
     margin-top: 0px;
 }
-.vis-item.vis-dot.vis-readonly {
+.vis-item.vis-box.vis-readonly {
     width: 2px;
     height:10px;
     background-color: red;
