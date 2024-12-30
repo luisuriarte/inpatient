@@ -21,12 +21,12 @@ $sql = "
         supply_datetime = ?,
         supplied_by = ?,
         status = 'Confirmed',
-        confirmation_datetime = NOW(),
+        confirmation_datetime = ?, -- Reemplazamos NOW() con el valor recibido
         modified_by = ?,
         supply_notes = ?
     WHERE supply_id = ?
 ";
-sqlStatement($sql, array($infusion_datetime, $supplied_by, $userId, $dose_note, $supply_id));
+sqlStatement($sql, array($infusion_datetime, $supplied_by, $infusion_datetime, $userId, $dose_note, $supply_id));
 
 // Confirmación de éxito
 echo json_encode(['status' => 'success']);

@@ -40,10 +40,13 @@ if ($selected_room) {
 
 $sql_query = "
 SELECT ps.supply_id, ps.schedule_datetime, ps.alarm1_datetime, ps.alarm1_active, ps.alarm2_datetime, ps.alarm2_active, 
-    ps.status, ps.dose_number, ps.max_dose, DATE_FORMAT(ps.schedule_datetime, '%h:%i %p') AS hs, 
+    ps.status, ps.dose_number, ps.max_dose, DATE_FORMAT(ps.schedule_datetime, '%h:%i %p') AS hs, supply_datetime,
     CONCAT(p.lname, ', ', p.fname, 
       IF(p.mname IS NOT NULL AND p.mname != '', CONCAT(' ', p.mname), '')
-     ) AS patient_full_name,
+     ) AS patient_full_name, us.id,
+    CONCAT(us.lname, ', ', us.fname, 
+      IF(us.mname IS NOT NULL AND us.mname != '', CONCAT(' ', us.mname), '')
+     ) AS user_full_name,
    bp.bed_id, bp.room_id, bp.unit_id, bp.facility_id, bp.`active` AS inpatient,
    f.name AS facility_name, u.unit_name AS unit_name, r.room_name AS room_name, b.bed_name AS bed_name,
    ps.schedule_id, pn.id AS prescription_id
@@ -56,6 +59,7 @@ LEFT JOIN facility AS f ON f.id = bp.facility_id
 LEFT JOIN units AS u ON u.id = bp.unit_id
 LEFT JOIN rooms AS r ON r.id = bp.room_id
 LEFT JOIN beds AS b ON b.id = bp.bed_id
+LEFT JOIN users AS us ON us.id = supplied_by
 $filters
 ORDER BY ps.schedule_datetime;
 ";
@@ -174,10 +178,13 @@ $result = sqlStatement($sql_query);
         while ($row = sqlFetchArray($result)) {
             $prescription_id = $row['prescription_id'];
             $patient_full_name = $row['patient_full_name'];
+            $user_full_name = $row['user_full_name'];
             $patient_location = $row['facility_name'] . ', ' . $row['unit_name'] . ', ' . $row['room_name'] . ', ' . $row['bed_name'];
             $schedule_datetime = $row['schedule_datetime'];
             $formatted_hour = date('h:i A', strtotime($schedule_datetime));
             $supply_id = $row['supply_id'];
+            $supply_datetime = $row['supply_datetime'];
+            $formatted_hour_supply = date('h:i A', strtotime($supply_datetime));
             $alarm1_datetime = $row['alarm1_datetime'];
             $alarm1_active = $row['alarm1_active']; // Verificar el estado de la alarma 1
             $alarm2_datetime = $row['alarm2_datetime'];
@@ -239,15 +246,26 @@ $result = sqlStatement($sql_query);
             // Agregar el evento principal para cada `supply_id`
             if ($schedule_datetime_js && $supply_id && $schedule_id) {
                 $event_id = 'main_event_' . $supply_id . '_' . $schedule_id;
-                $color = ($dose_status === 'Confirmed') ? 'background-color: blue; color: white;' : ''; // Color azul si está confirmado
+
+                // Ajustar el título y el color dependiendo del estado de la dosis
+                if ($dose_status === 'Confirmed') {
+                    // Formatear la hora a AM/PM
+                    $title = addslashes(xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} " . xlt('by') . " $user_full_name " . xlt('at') . " $formatted_hour_supply");
+                    $color = 'background-color: blue; color: white;'; // Color azul si está confirmado
+                } else {
+                    $title = addslashes($formatted_hour . ' ' . xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} - {$medications_text}");
+                    $color = ''; // Sin estilo adicional para otros estados
+                }
+
                 echo "items.add({
                     id: '$event_id',
                     content: '',
                     start: '$schedule_datetime_js',
                     group: 'group_$schedule_id',
-                    title: '" . addslashes($formatted_hour . ' ' . xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} - {$medications_text}") . "',
+                    title: '$title',
                     data: {doseStatus: '{$dose_status}'},
-                    style: '$color'
+                    style: '$color',
+                    className: 'supply',
                 });\n";
             }
 
@@ -271,7 +289,6 @@ $result = sqlStatement($sql_query);
                         group: 'group_$schedule_id', 
                         className: 'alarm1', 
                         title: '" . xlt('Alarm 1') . " - $event_alarm1_id: $alarm1_formatted', 
-                        type: 'box'
                     });\n";
                 }
             
@@ -293,7 +310,6 @@ $result = sqlStatement($sql_query);
                         group: 'group_$schedule_id', 
                         className: 'alarm2', 
                         title: '" . xlt('Alarm 2') . " - $event_alarm2_id: $alarm2_formatted', 
-                        type: 'box'
                     });\n";
                 }
             }

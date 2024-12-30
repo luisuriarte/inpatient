@@ -403,7 +403,7 @@ body {
     position: top;
     width: 10px;
     height: 10px;
-    background-color: #007bff;
+    background-color: #00ff2a;
     border-radius: 50%;
     border: 0px;
     margin-top: -15px;
@@ -411,6 +411,11 @@ body {
     z-index: 1;
     overflow: hidden;
 }
+.vis-item.supply {
+    background-color: green;
+    margin-top: -15px;
+}
+
 .vis-item.alarm1 {
     background-color: orange;
     margin-top: -15px;
@@ -419,35 +424,28 @@ body {
     background-color: red;
     margin-top: -15px;
 }
-.vis-item.vis-line {
-    padding: 0;
-    position: absolute;
-    width: 0;
-    border-left-width: 0px;
-    border-left-style: solid;
-    pointer-events: none;
-} 
+
 .vis-labelset {
     background-color: lightcyan;
 }
-.vis-item.vis-box.alarm1.vis-readonly {
+.vis-item.vis-dot.alarm1.vis-readonly {
+    width: 2px;
+    height: 10px;
+    background-color: orange;
+    border: 0px;
+    margin-top: 0px;
+}
+.vis-item.vis-dot.alarm2.vis-readonly {
     width: 2px;
     height: 10px;
     background-color: red;
     border: 0px;
     margin-top: 0px;
 }
-.vis-item.vis-box.alarm2.vis-readonly {
-    width: 2px;
-    height: 10px;
-    background-color: red;
-    border: 0px;
-    margin-top: 0px;
-}
-.vis-item.vis-box.vis-readonly {
+.vis-item.vis-dot.supply.vis-readonly {
     width: 2px;
     height:10px;
-    background-color: red;
+    background-color: green;
     border: 0px;
     margin-top: 0px;
 }
