@@ -438,7 +438,7 @@ body {
 .vis-item.vis-dot.alarm2.vis-readonly {
     width: 2px;
     height: 10px;
-    background-color: yellow;
+    background-color: orange;
     border: 0px;
     margin-top: 0px;
 }

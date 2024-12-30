@@ -488,88 +488,85 @@ $result = sqlStatement($sql_query);
                         $('#roomFilter').html(response).prop('disabled', false);
                     }
                 });
-            }
-        });
-    });
-
-    function adjustSchedule(scheduleId) {
-        $.ajax({
-            url: 'modal_order_edit.php',
-            type: 'GET',
-            data: { schedule_id: scheduleId },
-            success: function(response) {
-                // Insertar el contenido dinámico en el modal
-                $('#dynamicModalContainer').html(response);
-                var editModal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
-                editModal.show();
-            },
-            error: function() {
-                alert('Error loading the edit schedule modal.');
-            }
-        });
-    }
-
-    $(document).ready(function() {
-            $('#closeModalButton').click(function() {
-                $('#editScheduleModal').modal('hide');
+                }
             });
         });
-    var searchUsersUrl = "<?php echo $GLOBALS['webroot']; ?>/inpatient/search_users.php";
 
-    $(document).ready(function() {
-        // Inicializar visibilidad de campos de repetición y intravenosos según los switches
-        toggleRepeatFields();  
-        toggleIntravenousFields();
-        toggleNotificationFields();   
+        function adjustSchedule(scheduleId) {
+            $.ajax({
+                url: 'modal_order_edit.php',
+                type: 'GET',
+                data: { schedule_id: scheduleId },
+                success: function(response) {
+                    // Insertar el contenido dinámico en el modal
+                    $('#dynamicModalContainer').html(response);
+                    var editModal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
+                    editModal.show();
+                },
+                error: function() {
+                    alert('Error loading the edit schedule modal.');
+                }
+            });
+        }
 
-        // Escuchar cambios en los switches y alternar la visibilidad de los campos
-        $('#scheduledSwitch').on('change', function() {
+        $(document).ready(function() {
+            $('#closeModalButton').click(function() {
+                    $('#editScheduleModal').modal('hide');
+                });
+            // Inicializar visibilidad de campos de repetición y intravenosos según los switches
             toggleRepeatFields();  
-        });
+            toggleIntravenousFields();
+            toggleNotificationFields();   
 
-        $('#intravenousSwitch').on('change', function() {
-            toggleIntravenousFields();  
-        });
+            // Escuchar cambios en los switches y alternar la visibilidad de los campos
+            $('#scheduledSwitch').on('change', function() {
+                toggleRepeatFields();  
+            });
 
-        $('#notificationSwitch').on('change', function() {
-            toggleNotificationFields();  
-        });
-    });
+            $('#intravenousSwitch').on('change', function() {
+                toggleIntravenousFields();  
+            });
 
-    // Función para alternar la visibilidad de los campos de repetición
-    function toggleRepeatFields() {
-        if ($('#scheduledSwitch').is(':checked')) {
-            $('#repeatFields').show();  
-        } else {
-            $('#repeatFields').hide();  
+            $('#notificationSwitch').on('change', function() {
+                toggleNotificationFields();  
+            });
+
+            $('#route').change(function() {
+                // Obtener el `option_id` del atributo data-option-id
+                var selectedOptionId = $(this).find(':selected').data('option-id');
+                // Actualizar el campo oculto
+                $('#route_option_id').val(selectedOptionId);
+            });
+        });
+        
+        var searchUsersUrl = "<?php echo $GLOBALS['webroot']; ?>/inpatient/search_users.php";
+
+        // Función para alternar la visibilidad de los campos de repetición
+        function toggleRepeatFields() {
+            if ($('#scheduledSwitch').is(':checked')) {
+                $('#repeatFields').show();  
+            } else {
+                $('#repeatFields').hide();  
+            }
         }
-    }
 
-    // Función para alternar la visibilidad de los campos intravenosos
-    function toggleIntravenousFields() {
-        if ($('#intravenousSwitch').is(':checked')) {
-            $('#intravenousFields').show();  
-        } else {
-            $('#intravenousFields').hide();  
+        // Función para alternar la visibilidad de los campos intravenosos
+        function toggleIntravenousFields() {
+            if ($('#intravenousSwitch').is(':checked')) {
+                $('#intravenousFields').show();  
+            } else {
+                $('#intravenousFields').hide();  
+            }
         }
-    }
-    // Función para alternar la visibilidad de los campos alarmas
-    function toggleNotificationFields() {
-        if ($('#notificationSwitch').is(':checked')) {
-            $('#notificationFields').show();  
-        } else {
-            $('#notificationFields').hide();  
+        // Función para alternar la visibilidad de los campos alarmas
+        function toggleNotificationFields() {
+            if ($('#notificationSwitch').is(':checked')) {
+                $('#notificationFields').show();  
+            } else {
+                $('#notificationFields').hide();  
+            }
         }
-    }
 
-    $(document).ready(function() {
-        $('#route').change(function() {
-            // Obtener el `option_id` del atributo data-option-id
-            var selectedOptionId = $(this).find(':selected').data('option-id');
-            // Actualizar el campo oculto
-            $('#route_option_id').val(selectedOptionId);
-        });
-    });
     </script>
 
     <?php include 'modal_order_new_medication.php'; ?>
