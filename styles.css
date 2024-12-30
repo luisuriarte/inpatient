@@ -412,16 +412,16 @@ body {
     overflow: hidden;
 }
 .vis-item.supply {
-    background-color: green;
+    background-color: red;
     margin-top: -15px;
 }
 
 .vis-item.alarm1 {
-    background-color: orange;
+    background-color: green;
     margin-top: -15px;
 }
 .vis-item.alarm2 {
-    background-color: red;
+    background-color: yellow;
     margin-top: -15px;
 }
 
@@ -431,21 +431,21 @@ body {
 .vis-item.vis-dot.alarm1.vis-readonly {
     width: 2px;
     height: 10px;
-    background-color: orange;
+    background-color: green;
     border: 0px;
     margin-top: 0px;
 }
 .vis-item.vis-dot.alarm2.vis-readonly {
     width: 2px;
     height: 10px;
-    background-color: red;
+    background-color: yellow;
     border: 0px;
     margin-top: 0px;
 }
 .vis-item.vis-dot.supply.vis-readonly {
     width: 2px;
     height:10px;
-    background-color: green;
+    background-color: red;
     border: 0px;
     margin-top: 0px;
 }

@@ -437,11 +437,7 @@ $result = sqlStatement($sql_query);
                     alarmSound.currentTime = 0; // Reiniciar sonido
                 }, 120000); // 2 minutos
             }
-
-            // Llamar a las alarmas generadas por el servidor (ejemplo de prueba)
-            // Estos IDs deben coincidir con los generados por PHP
-            triggerAlarm('$event_alarm1_id', 'alarm1');
-            triggerAlarm('$event_alarm2_id', 'alarm2');
+        
         });
 
         function confirmDose(supplyId) {
