@@ -100,6 +100,25 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
 
 ?>
 <script>
+    function toggleRepeatFields() {
+        const switchElement = $('#scheduledSwitch');
+        const repeatFields = $('#repeatFields');
+
+        if (switchElement.is(':checked')) {
+            repeatFields.show();
+        } else {
+            repeatFields.hide();
+        }
+    }
+
+    // Delegación de eventos para el contenido dinámico
+    $(document).on('change', '#scheduledSwitch', toggleRepeatFields);
+
+    // Cuando el modal secundario se abre
+    $('#modalOrderEdit').on('shown.bs.modal', function () {
+        toggleRepeatFields(); // Inicializa el estado correcto
+    });
+    
     function adjustSchedule(scheduleId) {
         $.ajax({
             url: 'modal_order_edit.php',

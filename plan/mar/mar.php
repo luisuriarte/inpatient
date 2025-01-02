@@ -61,6 +61,7 @@ LEFT JOIN rooms AS r ON r.id = bp.room_id
 LEFT JOIN beds AS b ON b.id = bp.bed_id
 LEFT JOIN users AS us ON us.id = supplied_by
 $filters
+GROUP BY ps.supply_id
 ORDER BY ps.schedule_datetime;
 ";
 $result = sqlStatement($sql_query);
