@@ -90,6 +90,12 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
                 <?php echo xlt("Register Reaction or Effectiveness"); ?>
             </button>
         </div>
+        </div>
+        <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <?php echo xlt("Close"); ?>
+                </button>
+        </div>
         <?php
         echo ob_get_clean(); // Devuelve solo el contenido capturado
     } else {

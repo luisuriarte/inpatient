@@ -584,11 +584,6 @@ $result = sqlStatement($sql_query);
             <div class="modal-body">
                 <!-- Content loaded via AJAX -->
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <?php echo xlt("Close"); ?>
-                </button>
-            </div>
         </div>
     </div>
 </div>
