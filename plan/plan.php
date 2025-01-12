@@ -17,13 +17,13 @@ $title_patient_sex = $patient_sex;
 $title_insurance_name = $insurance_name;
 
 // Verificar si se ha seleccionado un paciente
-if (empty($patient_id) || empty($patient_name)) {
-    echo "<script>
-        alert('" . xla('First you must choose a patient') . "');
-        window.location.href = '../../../interface/main/finder/dynamic_finder.php';
-    </script>";
-    exit;
-}
+//if (empty($patient_id) || empty($patient_name)) {
+//    echo "<script>
+//        alert('" . xla('First you must choose a patient') . "');
+//        window.location.href = '../../../interface/main/finder/dynamic_finder.php';
+//    </script>";
+//    exit;
+//}
 $backgroundPatientCard = "#f6f9bc";
 ?>
 

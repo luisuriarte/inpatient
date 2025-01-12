@@ -3,13 +3,13 @@ require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
 // Verificar si la solicitud es POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+//if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Imprimir todos los datos enviados para debug
-    echo '<pre>';
-    print_r($_POST);
-    echo '</pre>';
-    exit; // Agregar esto para detener la ejecución temporalmente
-}
+//    echo '<pre>';
+//    print_r($_POST);
+//    echo '</pre>';
+//    exit; // Agregar esto para detener la ejecución temporalmente
+//}
  // Obtener los datos del formulario
     $bedsPatientsId = $_POST['beds_patients_id'] ?? null;
     $bedId = intval($_POST['bed_id']) ?? null;

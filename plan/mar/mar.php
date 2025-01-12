@@ -2,6 +2,17 @@
 // Ensure the user is authenticated and load the globals
 require_once("../../functions.php");
 require_once('../../../interface/globals.php');
+//require_once(__DIR__ . "../../../interface/globals.php");
+require_once($GLOBALS['srcdir'] . '/patient.inc.php');
+require_once($GLOBALS['srcdir'] . '/forms.inc.php');
+require_once($GLOBALS['srcdir'] . '/calendar.inc.php');
+require_once($GLOBALS['srcdir'] . '/options.inc.php');
+require_once($GLOBALS['srcdir'] . '/encounter_events.inc.php');
+require_once($GLOBALS['srcdir'] . '/patient_tracker.inc.php');
+require_once($GLOBALS['incdir'] . "/main/holidays/Holidays_Controller.php");
+require_once($GLOBALS['srcdir'] . '/group.inc.php');
+
+use OpenEMR\Core\Header;
 
 // Get the authenticated user information
 $userId = $_SESSION['authUserID'];
@@ -10,11 +21,6 @@ $userFullName = getUserFullName($userId);
 // The patient ID and name should be already available
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
-
-// Ensure a patient is selected
-if (!$patient_id) {
-    die(xlt('No patient selected.'));
-}
 
 // Obtener los valores de los filtros de la solicitud POST o inicializarlos vacíos
 $selected_facility = isset($_POST['facility_id']) ? intval($_POST['facility_id']) : '';
@@ -154,7 +160,8 @@ $result = sqlStatement($sql_query);
         <button type="button" class="btn btn-secondary" onclick="window.location.href='../plan.php';">
             <i class="fas fa-home"></i> <?php echo xlt('Back to Plan'); ?>
         </button>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#openMedicationModal<?= $patient_id ?>">
+        <button type="button" class="btn btn-primary" 
+            onclick="return validatePatientSelection() ? $('#openMedicationModal<?= attr($patient_id) ?>').modal('show') : false;">
             <?php echo xlt('Order New Medication'); ?>
         </button>
     </div>
@@ -568,10 +575,24 @@ $result = sqlStatement($sql_query);
             }
         }
 
+        function validatePatientSelection() {
+            var patientId = $('#pid').val();
+            var patientName = $('#patient_name').val();
+            
+            if (!patientId || !patientName) {
+                const title = <?php echo xlj('Patient Search'); ?>;
+                alert(<?php echo xlj('First you must choose a patient'); ?>);
+                //dlgopen('../../../interface/main/calendar/find_patient_popup.php', 'findPatient', 650, 300, '', title);
+                dlgopen('<?php echo $GLOBALS['webroot']; ?>/interface/main/calendar/find_patient_popup.php', '_blank', 500, 400, title);
+                return false;
+            }
+            return true;
+        }
     </script>
 
     <?php include 'modal_order_new_medication.php'; ?>
-    <!-- <script src="../../functions.js"></script> -->
+    <script src="../../functions.js"></script>
+    <script type="text/javascript" src="../../../library/dialog.js?v=<?php echo $v_js_includes; ?>"></script>
      
 
 <!-- Modal de dosis (marActionsModal) -->
