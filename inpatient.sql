@@ -312,25 +312,25 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'mild', 'Mild', 30, 0, 0, '', '', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'moderate', 'Moderate', 40, 0, 0, '', '', '');
 
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'available', 'Available', 1, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'occupied', 'Occupied', 2, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'reserved', 'Reserved', 4, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'under-maintenance', 'Under Maintenance', 3, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'available', 'Available', 1, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'occupied', 'Occupied', 2, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'reserved', 'Reserved', 4, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'under-maintenance', 'Under Maintenance', 3, 0, 0.0, '', '', '');
 
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'er', 'Emergency Room', 10, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'maternity', 'Maternity', 6, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'palliative-care', 'Palliative Care Unit', 9, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'pediatric-unit', 'Pediatric Unit', 7, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'private', 'Private', 3, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'rehabilitation-unit', 'Rehabilitation Unit', 8, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'semi-private', 'Semi-private', 2, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'standard', 'Standard', 1, 1, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'step-down', 'Intermediate Care Unit', 5, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'uci-icu', 'Intensive Care Unit', 4, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'vip', 'VIP Room', 11, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'er', 'Emergency Room', 10, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'maternity', 'Maternity', 6, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'palliative-care', 'Palliative Care Unit', 9, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'pediatric-unit', 'Pediatric Unit', 7, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'private', 'Private', 3, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'rehabilitation-unit', 'Rehabilitation Unit', 8, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'semi-private', 'Semi-private', 2, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'standard', 'Standard', 1, 1, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'step-down', 'Intermediate Care Unit', 5, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'uci-icu', 'Intensive Care Unit', 4, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_type', 'vip', 'VIP Room', 11, 0, 0.0, '', '', '');
 
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '1st_floor', '1st Floor', 3, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '2nd_floor', '2nd Floor', 4, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '3nd_loor', '3nd Floor', 5, 0, 0.0, '', '', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', 'll1', 'LL1', 2, 0, 0.0, '', 'Low Level 1', '');
-INSERT INTO openemr.list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', 'll2', 'LL2', 1, 0, 0.0, '', 'Low Level 2', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '1st_floor', '1st Floor', 3, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '2nd_floor', '2nd Floor', 4, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', '3nd_loor', '3nd Floor', 5, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', 'll1', 'LL1', 2, 0, 0.0, '', 'Low Level 1', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('unit_floor', 'll2', 'LL2', 1, 0, 0.0, '', 'Low Level 2', '');
