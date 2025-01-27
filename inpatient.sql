@@ -54,10 +54,10 @@ CREATE TABLE `rooms` (
   `uuid` binary(64) DEFAULT NULL,
   `unit_id` int(11) DEFAULT NULL,
   `facility_id` int(11) DEFAULT NULL,
-  `room_name` varchar(255) DEFAULT NULL,
+  `room_id` int(2) DEFAULT NULL,
+  `room_name` varchar(50) DEFAULT NULL,
   `number_of_beds` int(3) DEFAULT NULL,
-  `obs` text DEFAULT NULL,
-  `active` tinyint(1) DEFAULT NULL COMMENT '1 -> Active 0 ->Inactive',
+  `sector` varchar(50) DEFAULT NULL,
   `operation` varchar(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT 'Add, Edit or Delete',
   `user_modif` varchar(255) DEFAULT NULL,
   `datetime_modif` datetime DEFAULT NULL,
@@ -78,7 +78,8 @@ CREATE TABLE `rooms` (
   `isolation_level` varchar(50) DEFAULT NULL,
   `status` varchar(20) DEFAULT NULL,
   `current_capacity` int(11) DEFAULT NULL,
-  `sector` varchar(50) DEFAULT NULL,
+  `obs` text DEFAULT NULL,
+  `active` tinyint(1) DEFAULT NULL COMMENT '1 -> Active 0 ->Inactive',
   UNIQUE KEY `uuid` (`uuid`),
   KEY `id` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
