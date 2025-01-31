@@ -9,8 +9,10 @@ $userFullName = getUserFullName($userId);
 
 $roomId = $_GET['room_id'] ?? null;
 $roomName = $_GET['room_name'] ?? null;
+$roomSector = $_GET['room_sector'] ?? null;
 $unitId = $_GET['unit_id'] ?? null;
 $unitName = $_GET['unit_name'] ?? null;
+$unitFloor = $_GET['unit_floor'] ?? null;
 $facilityId = $_GET['facility_id'] ?? null;
 $facilityName = $_GET['facility_name'] ?? null;
 $bedAction = $_GET['bed_action'] ?? null;
@@ -26,6 +28,11 @@ $fromBedId = htmlspecialchars($_GET['from_bed_id']) ?? null;
 $fromRoomId = htmlspecialchars($_GET['from_room_id']) ?? null;
 $fromUnitId = htmlspecialchars($_GET['from_unit_id']) ?? null;
 $fromFacilityId = htmlspecialchars($_GET['from_facility_id']) ?? null;
+
+// Obtener los datos del cuarto
+$query = "SELECT * FROM rooms WHERE id = ?";
+$result = sqlStatement($query, [$roomId]);
+$room = sqlFetchArray($result);
 
 switch ($bedAction) {
     case 'Assign':
@@ -67,6 +74,7 @@ $bedPatients = getBedsPatientsData($roomId);
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> <!-- Material Icons -->
     <style>
         .ui-autocomplete {
             z-index: 1060;  /* O un valor más alto si es necesario */
@@ -79,10 +87,83 @@ $bedPatients = getBedsPatientsData($roomId);
 
 </head>
 <body>
+
+<?php
+
+// Lista de características con sus iconos y clases de color
+$features = [
+    "oxigen" => ["name" => "Oxygen", "icon" => "air", "class" => "icon-oxygen"],
+    "suction" => ["name" => "Suction", "icon" => "plumbing", "class" => "icon-plumbing"],
+    "cardiac_monitor" => ["name" => "Cardiac Monitor", "icon" => "monitor_heart", "class" => "icon-monitor"],
+    "ventilator" => ["name" => "Ventilator", "icon" => "heat_pump", "class" => "icon-fan"],
+    "infusion_pump" => ["name" => "Infusion Pump", "icon" => "medication", "class" => "icon-medication"],
+    "defibrillator" => ["name" => "Defibrillator", "icon" => "flash_on", "class" => "icon-flash"],
+    "crib_heater" => ["name" => "Crib Heater", "icon" => "crib", "class" => "icon-crib"],
+    "air_purifier" => ["name" => "Air Purifier", "icon" => "sync_alt", "class" => "icon-sync"],
+    "physiotherapy" => ["name" => "Physiotherapy", "icon" => "fitness_center", "class" => "icon-fitness"],
+    "wifi" => ["name" => "WiFi", "icon" => "wifi", "class" => "icon-wifi"],
+    "television" => ["name" => "Television", "icon" => "tv", "class" => "icon-tv"],
+    "entertainment_system" => ["name" => "Entertainment System", "icon" => "play_circle", "class" => "icon-play"],
+    "personalized_menu" => ["name" => "Personalized Menu", "icon" => "restaurant_menu", "class" => "icon-menu"],
+    "companion_space" => ["name" => "Companion Space", "icon" => "chair", "class" => "icon-chair"],
+    "private_bathroom" => ["name" => "Private Bathroom", "icon" => "bathroom", "class" => "icon-bathroom"],
+    "friendly_decor" => ["name" => "Friendly Decor", "icon" => "sentiment_very_satisfied", "class" => "icon-smile"],
+    "light_mode" => ["name" => "Lighting Mode", "icon" => "light_mode", "class" => "icon-light"],
+    "thermostat" => ["name" => "Thermostat", "icon" => "thermostat", "class" => "icon-thermostat"]
+];
+
+// Información adicional (label arriba, texto abajo)
+$additional_info = [
+    "sector" => ["label" => "Sector", "value" => $room['sector']],
+    "room_type" => ["label" => "Room Type", "value" => $room['room_type']],
+    "isolation_level" => ["label" => "Isolation Level", "value" => $room['isolation_level']],
+    "status" => ["label" => "Room Status", "value" => $room['status']]
+];
+
+?>
+<div class="facility-info mb-4 text-center">
+    <h4><?php echo htmlspecialchars($facilityName) . ' - ' . xl('Unit') . ': ' . htmlspecialchars($unitId)  . ' - ' . xl('Floor') . ': ' . htmlspecialchars($unitFloor)  . ' - ' . xl('Room') . ': ' . htmlspecialchars($roomName) . ' - ' . xl('Sector') . ': ' . htmlspecialchars($roomSector); ?></h4>
+</div>
+
+<div class="bed-banner">
+    <!-- Información de la habitación en una fila con 4 columnas -->
+    <div class="bed-banner-info">
+        <?php foreach ($additional_info as $info): ?>
+            <div class="bed-banner-info-item">
+                <div class="bed-banner-info-label"><?php echo xlt($info['label']); ?></div>
+                <div class="bed-banner-info-value"><?php echo xlt($info['value']); ?></div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Características con iconos -->
+    <div class="bed-banner-features">
+        <?php foreach ($features as $key => $feature): 
+            $isActive = !empty($room[$key]) ? true : false;
+            $colorClass = $isActive ? $feature['class'] : "text-muted";
+            $textClass = $isActive ? "font-weight-bold" : "text-muted";
+            $featureName = xlt($feature['name']);
+            $words = explode(" ", $featureName); // Dividir el texto en palabras
+        ?>
+            <div class="bed-banner-feature-item">
+                <span class="material-icons <?php echo $colorClass; ?>">
+                    <?php echo $feature['icon']; ?>
+                </span>
+                <div class="bed-banner-feature-label <?php echo $textClass; ?>">
+                    <?php if (count($words) > 1): ?>
+                        <span><?php echo $words[0]; ?></span>
+                        <span><?php echo $words[1]; ?></span>
+                    <?php else: ?>
+                        <span><?php echo $featureName; ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <?php
  
-
-
 $bedPatientId = 0;
 
 // Verifica si los parámetros GET están disponibles
@@ -131,15 +212,14 @@ if (isset($_GET['room_id'], $_GET['room_name'], $_GET['unit_id'], $_GET['unit_na
 
 <div class="container mt-4">
 
+<!-- 
 <?php
-    if (!empty($patient_id) || !empty($patient_name)) {
-        include '../../patient_header.html';
-    }
+//    if (!empty($patient_id) || !empty($patient_name)) {
+//        include '../../patient_header.html';
+//    }
 ?>
-    <div class="facility-info mb-4">
-        <h4><?php echo htmlspecialchars($facilityName) . ' - ' . xl('Unit') . ': ' . htmlspecialchars($unitId) . ' - ' . xl('Room') . ': ' . htmlspecialchars($roomName); ?></h4>
-    </div>
-    
+-->
+   
     <?php if (!empty($bedPatients)): ?>
         <div class="row">
         <?php foreach ($bedPatients as $bedPatient): ?>

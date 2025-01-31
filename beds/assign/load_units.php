@@ -19,9 +19,16 @@ $units = [];
 
 // Obtener los resultados y almacenarlos en un array
 while ($row = sqlFetchArray($result)) {
+    // Obtener la descripción del piso
+    $floor_query = "SELECT title FROM list_options WHERE list_id = 'unit_floor' AND option_id = ?";
+    $floor_result = sqlQuery($floor_query, [$row['unit_floor_id']]);
+    $floor_title = $floor_result ? $floor_result['title'] : '';
+
     $units[] = [
         'id' => $row['id'],
         'unit_name' => $row['unit_name'],
+        'unit_floor_id' => $row['unit_floor_id'],
+        'unit_floor' => $floor_title, // Agregamos la descripción del piso
         'number_of_rooms' => $row['number_of_rooms'],
         'obs' => $row['obs']
     ];
@@ -30,3 +37,4 @@ while ($row = sqlFetchArray($result)) {
 // Enviar los datos en formato JSON
 echo json_encode($units);
 ?>
+

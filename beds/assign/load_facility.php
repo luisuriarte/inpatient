@@ -2,15 +2,6 @@
 require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
-// Obtener el ID del centro enviado desde la petición AJAX
-//$centro_id = isset($_POST['centro_id']) ? intval($_POST['centro_id']) : 0;
-
-// Verificar que el centro sea válido
-//if ($centro_id <= 0) {
-//    echo json_encode([]);
-//    exit;
-//}
-
 // Consulta para obtener las unidades activas del centro
 $query = "SELECT * FROM facility WHERE inactive = 0 AND facility_taxonomy = '30' AND ";
 $result = sqlStatement($query, [$centro_id]);

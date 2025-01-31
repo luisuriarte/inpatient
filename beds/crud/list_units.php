@@ -136,31 +136,43 @@ if (isset($_GET['warningMessage'])) {
                                 </button>
                             </div>
 
-                        <!-- Modal para Ver Unidad -->
-                        <div class="modal fade" id="viewUnitModal<?php echo htmlspecialchars($unit['id']); ?>" tabindex="-1" aria-labelledby="viewUnitModalLabel<?php echo htmlspecialchars($unit['id']); ?>" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="viewUnitModalLabel<?php echo htmlspecialchars($unit['id']); ?>">
-                                            <?php echo htmlspecialchars($centroName); ?> - <?php echo htmlspecialchars($unit['unit_name']); ?>
-                                        </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <p><strong><?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
-                                        <p><strong><?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unit['unit_name']); ?></p>
-                                        <p><strong><?php echo xlt('Nuber of Rooms'); ?>:</strong> <?php echo intval($unit['number_of_rooms']); ?></p>
-                                        <p><strong><?php echo xlt('Notes'); ?>:</strong> <?php echo htmlspecialchars($unit['obs']); ?></p>
-                                        <p><strong><?php echo xlt('Situation'); ?>:</strong> <?php echo $unit['active'] ? 'Activa' : 'Inactiva'; ?></p>
-                                        <p><strong><?php echo xlt('Last Modified'); ?>:</strong> <?php echo htmlspecialchars($unit['datetime_modif']); ?></p>
-                                        <p><strong><?php echo xlt('User'); ?>:</strong> <?php echo htmlspecialchars($unit['user_modif']); ?></p>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo xlt('Close'); ?></button>
+                            <!-- Modal para Ver Unidad -->
+                            <div class="modal fade" id="viewUnitModal<?php echo htmlspecialchars($unit['id']); ?>" tabindex="-1" aria-labelledby="viewUnitModalLabel<?php echo htmlspecialchars($unit['id']); ?>" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="viewUnitModalLabel<?php echo htmlspecialchars($unit['id']); ?>">
+                                                <?php echo htmlspecialchars($centroName); ?> - <?php echo htmlspecialchars($unit['unit_name']); ?>
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong><?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
+                                            <p><strong><?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unit['unit_name']); ?></p>
+
+                                            <!-- Campo Floor -->
+                                            <p><strong><?php echo xlt('Floor'); ?>:</strong> 
+                                                <?php
+                                                // Obtener el nombre del piso desde list_options
+                                                $floorQuery = "SELECT title FROM list_options WHERE list_id = 'unit_floor' AND option_id = ?";
+                                                $floorResult = sqlStatement($floorQuery, [$unit['floor']]);
+                                                $floorData = sqlFetchArray($floorResult);
+                                                echo htmlspecialchars($floorData['title'] ?? 'N/A'); // Mostrar el título del piso o 'N/A' si no se encuentra
+                                                ?>
+                                            </p>
+
+                                            <p><strong><?php echo xlt('Number of Rooms'); ?>:</strong> <?php echo intval($unit['number_of_rooms']); ?></p>
+                                            <p><strong><?php echo xlt('Notes'); ?>:</strong> <?php echo htmlspecialchars($unit['obs']); ?></p>
+                                            <p><strong><?php echo xlt('Situation'); ?>:</strong> <?php echo $unit['active'] ? xlt('Active') : xlt('Inactive'); ?></p>
+                                            <p><strong><?php echo xlt('Last Modified'); ?>:</strong> <?php echo htmlspecialchars($unit['datetime_modif']); ?></p>
+                                            <p><strong><?php echo xlt('User'); ?>:</strong> <?php echo htmlspecialchars($unit['user_modif']); ?></p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo xlt('Close'); ?></button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
                         <!-- Modal para Confirmar Eliminación -->
                         <div class="modal fade" id="deleteUnitModal<?php echo htmlspecialchars($unit['id']); ?>" tabindex="-1" aria-labelledby="deleteUnitModalLabel<?php echo htmlspecialchars($unit['id']); ?>" aria-hidden="true">

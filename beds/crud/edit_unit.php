@@ -61,6 +61,24 @@ $userFullName = getuserFullName($userId);
                             <label for="unitName" class="form-label"><?php echo xlt('Unit Name'); ?>:</label>
                             <input type="text" class="form-control" id="unitName" name="unit_name" value="<?php echo htmlspecialchars($unit['unit_name']); ?>" required>
                         </div>
+                        
+                        <!-- Campo Floor -->
+                        <div class="mb-3">
+                            <label for="unitFloor" class="form-label"><?php echo xlt('Floor'); ?>:</label>
+                            <select class="form-select" id="unitFloor" name="floor" required>
+                                <?php
+                                // Obtener los pisos desde la tabla list_options
+                                $floors = sqlStatement("SELECT option_id, title FROM list_options WHERE list_id = 'unit_floor'");
+                                while ($floor = sqlFetchArray($floors)):
+                                    $selected = ($floor['option_id'] == $unit['floor']) ? 'selected' : '';
+                                ?>
+                                    <option value="<?php echo htmlspecialchars($floor['option_id']); ?>" <?php echo $selected; ?>>
+                                        <?php echo htmlspecialchars($floor['title']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+
                         <div class="mb-3">
                             <label for="unitRooms" class="form-label"><?php echo xlt('Number of Rooms'); ?>:</label>
                             <input type="number" class="form-control" id="unitRooms" name="number_of_rooms" value="<?php echo htmlspecialchars($unit['number_of_rooms']); ?>" required>

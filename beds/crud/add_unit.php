@@ -49,6 +49,22 @@ $warningMessage = isset($_GET['warningMessage']) ? urldecode($_GET['warningMessa
                             <label for="unitName" class="form-label"><?php echo xlt('Unit Name'); ?>:</label>
                             <input type="text" class="form-control" id="unitName" name="unit_name" required>
                         </div>
+                        <!-- Campo Floor -->
+                        <div class="mb-3">
+                            <label for="unitFloor" class="form-label"><?php echo xlt('Floor'); ?>:</label>
+                            <select class="form-select" id="unitFloor" name="floor" required>
+                                <?php
+                                // Obtener los pisos desde la tabla list_options
+                                $floors = sqlStatement("SELECT option_id, title FROM list_options WHERE list_id = 'unit_floor'");
+                                while ($floor = sqlFetchArray($floors)):
+                                ?>
+                                    <option value="<?php echo htmlspecialchars($floor['option_id']); ?>">
+                                        <?php echo htmlspecialchars($floor['title']); ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+
                         <div class="mb-3">
                             <label for="unitRooms" class="form-label"><?php echo xlt('Number of Rooms'); ?>:</label>
                             <input type="number" class="form-control" id="unitRooms" name="number_of_rooms" required>
@@ -68,7 +84,6 @@ $warningMessage = isset($_GET['warningMessage']) ? urldecode($_GET['warningMessa
                     </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-success"><?php echo xlt('Add'); ?></button>
-                        <button type="reset" class="btn btn-secondary"><?php echo xlt('Reset'); ?></button>
                         <button type="button" class="btn btn-primary" data-bs-dismiss="modal"><?php echo xlt('Close'); ?></button>
                     </div>
                 </form>

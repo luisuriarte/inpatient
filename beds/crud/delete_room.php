@@ -36,4 +36,5 @@ if ($result) {
     echo "Error al actualizar la unidad.";
 }
 
-?>
+}
+

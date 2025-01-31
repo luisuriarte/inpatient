@@ -50,9 +50,11 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
     <script src="functions.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> <!-- Material Icons -->
 </head>
 <body>
-    <div class="container mt-4">
+
+<div class="container mt-4">
         <!-- Mostrar el mensaje de advertencia en una ventana emergente -->
         <?php if ($showWarning && $warningMessage): ?>
             <div class="modal fade" id="warningModal" tabindex="-1" aria-labelledby="warningModalLabel" aria-hidden="true">
@@ -139,7 +141,7 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
 
                         <!-- Modal para Ver Unidad -->
                         <div class="modal fade" id="viewRoomModal<?php echo htmlspecialchars($room['id']); ?>" tabindex="-1" aria-labelledby="viewRoomModalLabel<?php echo htmlspecialchars($room['id']); ?>" aria-hidden="true">
-                            <div class="modal-dialog">
+                            <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="viewRoomModalLabel<?php echo htmlspecialchars($room['id']); ?>">
@@ -148,17 +150,230 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p><strong><?php echo xlt('Facility:'); ?></strong> <?php echo htmlspecialchars($centroName); ?></p>
-                                        <p><strong><?php echo xlt('Unit:'); ?></strong> <?php echo htmlspecialchars($unitName); ?></p>
-                                        <p><strong><?php echo xlt('Room:'); ?></strong> <?php echo htmlspecialchars($room['room_name']); ?></p>
-                                        <p><strong><?php echo xlt('Number of Beds:'); ?></strong> <?php echo intval($room['number_of_beds']); ?></p>
-                                        <p><strong><?php echo xlt('Notes:'); ?></strong> <?php echo htmlspecialchars($room['obs']); ?></p>
-                                        <p><strong><?php echo xlt("Situation:"); ?></strong> 
-                                            <?php echo $room['active'] ? xlt("Active") : xlt("Inactive"); ?>
-                                        </p>
-                                        <p><strong><?php echo xlt('Last Modified:'); ?></strong> <?php echo htmlspecialchars($room['datetime_modif']); ?></p>
-                                        <p><strong><?php echo xlt('Type of Modification:'); ?></strong> <?php echo htmlspecialchars($room['operation']); ?></p>
-                                        <p><strong><?php echo xlt('Modified by:'); ?></strong> <?php echo htmlspecialchars($room['user_modif']); ?></p>
+                                        <!-- Primera fila: Labels -->
+                                        <div class="row mb-2">
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Facility'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Unit'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Sector'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Room'); ?></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Segunda fila: Valores -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($centroName); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($unitName); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['sector']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['room_name']); ?></strong></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tercera fila: Labels -->
+                                        <div class="row mb-2">
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Number of Beds'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Room Type'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Isolation Level'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Room Status'); ?></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Cuarta fila: Valores -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo intval($room['number_of_beds']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['room_type']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['isolation_level']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['status']); ?></strong></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Medical Equipment and Amenities (centered container) -->
+                                        <div class="row justify-content-center mb-3">
+                                            <div class="col-md-10">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        <!-- Medical Equipment -->
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-bold"><?php echo xlt('Medical Equipment'); ?>:</label>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="oxigen" name="oxigen" value="1" <?php echo ($room['oxigen'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="oxigen">
+                                                                        <i class="material-icons icon-oxygen">air</i> <?php echo xlt('Oxygen Connections'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="suction" name="suction" value="1" <?php echo ($room['suction'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="suction">
+                                                                        <i class="material-icons icon-plumbing">plumbing</i> <?php echo xlt('Suction System'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="cardiac_monitor" name="cardiac_monitor" value="1" <?php echo ($room['cardiac_monitor'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="cardiac_monitor">
+                                                                        <i class="material-icons icon-monitor">monitor_heart</i> <?php echo xlt('Cardiac Monitor'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="ventilator" name="ventilator" value="1" <?php echo ($room['ventilator'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="ventilator">
+                                                                        <i class="material-icons icon-fan">heat_pump</i> <?php echo xlt('Ventilator'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="infusion_pump" name="infusion_pump" value="1" <?php echo ($room['infusion_pump'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="infusion_pump">
+                                                                        <i class="material-icons icon-medication">medication</i> <?php echo xlt('Infusion Pumps'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="defibrillator" name="defibrillator" value="1" <?php echo ($room['defibrillator'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="defibrillator">
+                                                                        <i class="material-icons icon-flash">flash_on</i> <?php echo xlt('Defibrillator'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="physiotherapy" name="physiotherapy" value="1" <?php echo ($room['physiotherapy'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="physiotherapy">
+                                                                        <i class="material-icons icon-fitness">fitness_center</i> <?php echo xlt('Physiotherapy Equipment'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="heater" name="heater" value="1" <?php echo ($room['heater'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="heater">
+                                                                        <i class="material-icons icon-crib">crib</i> <?php echo xlt('Crib Heater'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="air_purifier" name="air_purifier" value="1" <?php echo ($room['air_purifier'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="air_purifier">
+                                                                        <i class="material-icons icon-sync">sync_alt</i> <?php echo xlt('Air Purifier'); ?>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label fw-bold"><?php echo xlt('Amenities'); ?>:</label>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="wifi" name="wifi" value="1" <?php echo ($room['wifi'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="wifi">
+                                                                        <i class="material-icons icon-wifi">wifi</i> <?php echo xlt('WiFi'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="television" name="television" value="1" <?php echo ($room['television'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="television">
+                                                                        <i class="material-icons icon-tv">tv</i> <?php echo xlt('Television'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="entertainment_system" name="entertainment_system" value="1" <?php echo ($room['entertainment_system'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="entertainment_system">
+                                                                        <i class="material-icons icon-play">play_circle</i> <?php echo xlt('Entertainment System'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="personalized_menu" name="personalized_menu" value="1" <?php echo ($room['personalized_menu'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="personalized_menu">
+                                                                        <i class="material-icons icon-menu">restaurant_menu</i> <?php echo xlt('Personalized Menu'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="companion_space" name="companion_space" value="1" <?php echo ($room['companion_space'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="companion_space">
+                                                                        <i class="material-icons icon-chair">chair</i> <?php echo xlt('Companion Space'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="private_bathroom" name="private_bathroom" value="1" <?php echo ($room['private_bathroom'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="private_bathroom">
+                                                                        <i class="material-icons icon-bathroom">bathroom</i> <?php echo xlt('Private Bathroom'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="friendly_decor" name="friendly_decor" value="1" <?php echo ($room['friendly_decor'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="friendly_decor">
+                                                                        <i class="material-icons icon-smile">sentiment_very_satisfied</i> <?php echo xlt('Friendly Decor'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="light_mode" name="light_mode" value="1" <?php echo ($room['light_mode'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="light_mode">
+                                                                        <i class="material-icons icon-light">light_mode</i> <?php echo xlt('Light Mode'); ?>
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="thermostat" name="thermostat" value="1" <?php echo ($room['thermostat'] == 1) ? 'checked' : ''; ?> disabled>
+                                                                    <label class="form-check-label" for="thermostat">
+                                                                        <i class="material-icons icon-thermostat">thermostat</i> <?php echo xlt('Thermostat'); ?>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p><?php echo xlt('Notes') . ': '; ?><strong><?php echo htmlspecialchars($room['obs']); ?></strong></p>
+                                        <!-- Quinta fila: Labels -->
+                                        <div class="row mb-2">
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Situation'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Last Modified'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Type of Modification'); ?></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-label"><?php echo xlt('Modified by'); ?></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sexta fila: Valores -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo $room['active'] ? xlt("Active") : xlt("Inactive"); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['datetime_modif']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['operation']); ?></strong></div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['user_modif']); ?></strong></div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-primary" data-bs-dismiss="modal"><?php echo xlt('Close'); ?></button>

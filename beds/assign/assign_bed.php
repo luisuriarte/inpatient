@@ -386,8 +386,10 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
                 <div class="room-card card text-center mx-2 mb-3" style="width: 18rem;" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>
 														&room_name=<?php echo urlencode($room['room_name']); ?>
+                                                        &room_sector=<?php echo urlencode($room['room_sector']); ?>
 														&unit_id=<?php echo urlencode($unitId); ?>
 														&unit_name=<?php echo urlencode($unitName); ?>
+                                                        &unit_floor=<?php echo urlencode($unitFloor); ?>
 														&facility_id=<?php echo urlencode($facilityId); ?>
 														&facility_name=<?php echo urlencode($facilityName); ?>
                                                         &patient_name_relocate=<?php echo htmlspecialchars($patientNameRelocate); ?>

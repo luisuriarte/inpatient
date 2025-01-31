@@ -22,6 +22,7 @@ while ($row = sqlFetchArray($result)) {
     $rooms[] = [
         'id' => $row['id'],
         'room_name' => $row['room_name'],
+        'room_sector' => $row['room_sector'],
         'number_of_beds' => $row['number_of_beds'],
         'obs' => $row['obs']
     ];

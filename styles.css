@@ -541,6 +541,14 @@ body {
     width: 200px; /* Ancho fijo para cada dropdown */
     text-align: center; /* Centrar texto dentro del dropdown */
 } 
+#floor_id {
+    background-color: #feffcc; /* Verde suave de fondo */
+    height: 35px; /* Ajustar la altura */
+    font-size: 14px; /* Tamaño de fuente */
+    width: 200px; /* Ancho fijo para cada dropdown */
+    text-align: center; /* Centrar texto dentro del dropdown */
+}
+
 #unit_id {
     background-color: #ccffcc; /* Verde suave de fondo */
     height: 35px; /* Ajustar la altura */
@@ -584,4 +592,161 @@ body {
     0% { background-color: red; }
     50% { background-color: transparent; }
     100% { background-color: red; }
+}
+
+/* Custom styles for icons */
+.material-icons {
+    vertical-align: middle;
+    margin-right: 8px;
+    font-weight: bold;
+}
+/* Google Material Symbols and Icons */
+.icon-oxygen { color: #1e88e5; } /* icon: air, field: oxygen  */
+.icon-plumbing { color: #6d4c41; } /* icon: plumbing, field: suction  */
+.icon-monitor { color: #d81b60; } /* icon: monitor_heart, field: cardiac_monitor  */
+.icon-fan { color: #43a047; } /* icon: , field: ventilator  */
+.icon-medication { color: #8e24aa; } /* icon: medication, field: infusion_pump  */
+.icon-flash { color: #ffb300; } /* icon: flash_on, field: defibrillator  */
+.icon-fitness { color: #f4511e; } /* icon: fitness_center, field: physiotherapy  */
+.icon-crib { color: #039be5; } /* icon: crib, field: crib_heater  */
+.icon-sync { color: #00acc1; } /* icon: sync_alt, field: air_purifier  */
+.icon-wifi { color: #00acc1; } /* icon: wifi, field: wifi  */
+.icon-tv { color: #bd28b5; } /* icon: tv, field: television  */
+.icon-play { color: #e53935; } /* icon: play_circle, field: entertainment_system  */
+.icon-menu { color: #8e24aa; } /* icon: restaurant_menu, field: personalized_menu  */
+.icon-chair { color: #43a047; } /* icon: chair, field: companion_space  */
+.icon-bathroom { color: #1e88e5; } /* icon: bathroom, field: private_bathroom  */
+.icon-smile { color: #fdd835; } /* icon: sentiment_very_satisfied, field: friendly_decor */
+.icon-light { color: #ffb300; } /* icon: light_mode, field: light_mode */
+.icon-thermostat { color: #f4511e; } /* icon: thermostat, field: thermostat  */
+
+/* Estilos del banner */
+.bed-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra el contenido */
+    background-color: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    width: 100%;
+}
+
+/* Información de la habitación en fila */
+.bed-banner-info {
+    display: flex;
+    justify-content: center; /* Centra los elementos */
+    gap: 20px; /* Espacio entre elementos */
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.bed-banner-info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 14px;
+    text-align: center;
+    flex: 1; /* Distribuye equitativamente */
+}
+
+.bed-banner-info-label {
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #333;
+    font-size: 14px;
+}
+
+.bed-banner-info-value {
+    font-size: 16px;
+    color: #555;
+}
+
+/* Características con iconos en una sola línea */
+.bed-banner-features {
+    display: flex;
+    flex-wrap: nowrap; /* Evita que los elementos se envuelvan a la siguiente línea */
+    gap: 15px; /* Espacio entre elementos */
+    width: 100%;
+    overflow-x: auto; /* Permite el desplazamiento horizontal si hay muchos íconos */
+    padding-bottom: 10px; /* Espacio para el scroll */
+}
+
+.bed-banner-feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    font-size: 14px;
+    min-width: 100px; /* Ancho mínimo para cada ícono */
+    flex-shrink: 0; /* Evita que los elementos se reduzcan */
+}
+
+.text-muted {
+    color: #ccc !important;
+}
+
+.font-weight-bold {
+    font-weight: bold;
+}
+
+.bed-banner-feature-label {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bed-banner-feature-label span {
+    display: block; /* Cada palabra en una línea */
+}
+
+/* Estilos para los íconos y características */
+.cuarto-features {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los íconos se envuelvan en varias líneas */
+    gap: 15px; /* Espacio entre elementos */
+    margin-top: 15px;
+}
+
+.cuarto-feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    font-size: 14px;
+    min-width: 100px; /* Ancho mínimo para cada ícono */
+}
+
+.cuarto-feature-label {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.cuarto-feature-label span {
+    display: block; /* Cada palabra en una línea */
+}
+
+/* Estilos para el texto e icono cuando la casilla NO está marcada y está deshabilitada */
+.form-check-input:not(:checked):disabled + label {
+    color: #adb5bd; /* Color grisáceo */
+    opacity: 0.65; /* Opacidad para el efecto de aclarado */
+    cursor: default;
+}
+
+.form-check-input:not(:checked):disabled + label i {
+    opacity: 0.65; /* Opacidad para el icono */
+}
+
+/* Estilos para el texto e icono cuando la casilla ESTÁ marcada y está deshabilitada */
+.form-check-input:checked:disabled + label {
+    color: inherit; /* Restablece el color del texto */
+    opacity: 1; /* Restablece la opacidad del texto */
+    cursor: default;
+}
+
+.form-check-input:checked:disabled + label i {
+    opacity: 1; /* Restablece la opacidad del icono */
 }

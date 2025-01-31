@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $unitName = $_POST['unit_name'];
     $numberOfRooms = $_POST['number_of_rooms'];
     $obs = $_POST['obs'];
+    $floor = $_POST['floor']; // Nuevo campo Floor
     $active = isset($_POST['active']) ? 1 : 0;
     $operation = 'Edit';
     $userId = $_SESSION['authUserID'];
@@ -27,11 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
  
     // Preparar la consulta para actualizar la unidad
     $query = "UPDATE units 
-              SET unit_name = ?, number_of_rooms = ?, obs = ?, active = ?, operation = ?, user_modif = ?, datetime_modif = ?
+              SET unit_name = ?, number_of_rooms = ?, obs = ?, active = ?, operation = ?, user_modif = ?, datetime_modif = ?, floor = ?
               WHERE id = ?";
 
     try {
-        sqlStatement($query, array($unitName, $numberOfRooms, $obs, $active, $operation, $userFullName, $datetimeModif, $unitId));
+        sqlStatement($query, array($unitName, $numberOfRooms, $obs, $active, $operation, $userFullName, $datetimeModif, $floor, $unitId));
 
         // Redirigir al formulario list_units.php con el ID y nombre del centro
         header("Location: list_units.php?centro_id=" . htmlspecialchars($centroId) . "&centro_name=" . htmlspecialchars($centroName));
@@ -39,11 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      
     } catch (Exception $e) {
         // Mostrar el error si la consulta falla
-        echo "Error al actualizar el cuarto: " . $e->getMessage();
-        }
-    
-    } else {
-    echo "Método de solicitud no permitido.";
+        echo "Error al actualizar la unidad: " . $e->getMessage();
     }
-?>
     
+} else {
+    echo "Método de solicitud no permitido.";
+}  

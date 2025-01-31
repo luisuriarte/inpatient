@@ -14,6 +14,12 @@ require_once($GLOBALS['srcdir'] . '/group.inc.php');
 
 use OpenEMR\Core\Header;
 
+// Capturar valores del formulario
+$selected_facility = $_POST['facility_id'] ?? '';
+$selected_floor = $_POST['floor_id'] ?? '';
+$selected_unit = $_POST['unit_id'] ?? '';
+$selected_room = $_POST['room_id'] ?? '';
+
 // Get the authenticated user information
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
@@ -22,20 +28,19 @@ $userFullName = getUserFullName($userId);
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
 
-// Obtener los valores de los filtros de la solicitud POST o inicializarlos vacíos
-$selected_facility = isset($_POST['facility_id']) ? intval($_POST['facility_id']) : '';
-$selected_unit = isset($_POST['unit_id']) ? intval($_POST['unit_id']) : '';
-$selected_room = isset($_POST['room_id']) ? intval($_POST['room_id']) : '';
-
-// Consulta para obtener las opciones de Facility, Unit y Room
+// Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
-$units = $selected_facility ? sqlStatement("SELECT id, unit_name FROM units WHERE facility_id = ? AND active = 1", [$selected_facility]) : [];
+$units = $selected_facility ? sqlStatement("SELECT id, unit_name FROM units WHERE facility_id = ? AND floor = ? AND active = 1", [$selected_facility, $selected_floor]) : [];
+$floors = sqlStatement("SELECT option_id, title FROM list_options WHERE list_id = 'unit_floor' ORDER BY title ASC");
 $rooms = $selected_unit ? sqlStatement("SELECT id, room_name FROM rooms WHERE unit_id = ?  AND active = 1", [$selected_unit]) : [];
 
 // Modificar la consulta principal según los filtros
 $filters = "WHERE bp.`active` = 1 AND ps.active = 1";
 if ($selected_facility) {
     $filters .= " AND bp.facility_id = $selected_facility";
+}
+if ($selected_floor) {
+    $filters .= " AND u.floor = '$selected_floor'"; // Filtrar por piso
 }
 if ($selected_unit) {
     $filters .= " AND bp.unit_id = $selected_unit";
@@ -105,7 +110,7 @@ $result = sqlStatement($sql_query);
     <form method="POST" action="" class="row mb-3 d-flex justify-content-center">
         <div class="form-row">
             <!-- Dropdown Facility -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="facility_id" class="form-label"><?php echo xlt('Select Facility'); ?></label>
                 <select name="facility_id" id="facility_id" class="form-select" onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Facilities'); ?></option>
@@ -117,13 +122,29 @@ $result = sqlStatement($sql_query);
                     <?php } ?>
                 </select>
             </div>
+
+            <!-- Dropdown Floor -->
+            <div class="col-md-3">
+                <label for="floor_id" class="form-label"><?php echo xlt('Select Floor'); ?></label>
+                <select name="floor_id" id="floor_id" class="form-select" <?php echo !$selected_facility ? 'disabled' : ''; ?> onchange="this.form.submit()">
+                    <option value=""><?php echo xlt('All Floors'); ?></option>
+                    <?php if ($selected_facility) {
+                        while ($floor = sqlFetchArray($floors)) { ?>
+                            <option value="<?php echo $floor['option_id']; ?>" 
+                                <?php echo ($floor['option_id'] == $selected_floor) ? 'selected' : ''; ?>>
+                                <?php echo text($floor['title']); ?>
+                            </option>
+                    <?php }
+                    } ?>
+                </select>
+            </div>
             
             <!-- Dropdown Unit -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="unit_id" class="form-label"><?php echo xlt('Select Unit'); ?></label>
-                <select name="unit_id" id="unit_id" class="form-select" <?php echo !$selected_facility ? 'disabled' : ''; ?> onchange="this.form.submit()">
+                <select name="unit_id" id="unit_id" class="form-select" <?php echo !$selected_facility || !$selected_floor ? 'disabled' : ''; ?> onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Units'); ?></option>
-                    <?php if ($selected_facility) {
+                    <?php if ($selected_facility && $selected_floor) {
                         while ($unit = sqlFetchArray($units)) { ?>
                             <option value="<?php echo $unit['id']; ?>" 
                                 <?php echo ($unit['id'] == $selected_unit) ? 'selected' : ''; ?>>
@@ -135,7 +156,7 @@ $result = sqlStatement($sql_query);
             </div>
 
             <!-- Dropdown Room -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="room_id" class="form-label"><?php echo xlt('Select Room'); ?></label>
                 <select name="room_id" id="room_id" class="form-select" <?php echo !$selected_unit ? 'disabled' : ''; ?> onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Rooms'); ?></option>

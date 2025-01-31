@@ -8,7 +8,7 @@ $warningMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validar que todos los campos requeridos existan y no estén vacíos
-    if (isset($_POST['unit_name'], $_POST['number_of_rooms'], $_POST['obs'], $_POST['centro_id'], $_POST['centro_name'], $_POST['uuid'], $_POST['user_modif'], $_POST['operation'])) {
+    if (isset($_POST['unit_name'], $_POST['number_of_rooms'], $_POST['obs'], $_POST['centro_id'], $_POST['centro_name'], $_POST['uuid'], $_POST['user_modif'], $_POST['operation'], $_POST['floor'])) {
         $unitName = trim($_POST['unit_name']);
         $numberOfRooms = intval($_POST['number_of_rooms']);
         $obs = trim($_POST['obs']);
@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uuid = trim($_POST['uuid']);
         $userModif = trim($_POST['user_modif']);
         $operation = trim($_POST['operation']);
+        $floor = trim($_POST['floor']); // Nuevo campo Floor
         $active = isset($_POST['active']) ? 1 : 0;
         $datetimeModif = date('Y-m-d H:i:s');
 
@@ -32,8 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $unitsCountData = sqlFetchArray($unitsCountResult);
         $currentUnitsCount = $unitsCountData['count'];
 
-       // Validar si la cantidad de unidades excede el límite permitido
-       if ($currentUnitsCount >= $facilitynumberofunits) {
+        // Validar si la cantidad de unidades excede el límite permitido
+        if ($currentUnitsCount >= $facilitynumberofunits) {
             // Codificar el mensaje de advertencia para pasarlo en la URL
             $warningMessage = urlencode("No se puede agregar la unidad. El número máximo de unidades permitidas para este centro es " . $facilitynumberofunits . ".");
             header("Location: list_units.php?centro_id=" . htmlspecialchars($centroId) . "&centro_name=" . htmlspecialchars($centroName) . "&warningMessage=" . $warningMessage . "&showWarning=true");
@@ -41,25 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Validar datos
-        if (empty($unitName) || empty($userModif) || empty($uuid) || empty($operation)) {
+        if (empty($unitName) || empty($userModif) || empty($uuid) || empty($operation) || empty($floor)) {
             $warningMessage = "Todos los campos obligatorios deben estar completos.";
         } elseif (!is_int($numberOfRooms) || $numberOfRooms < 0) {
             $warningMessage = "El número de cuartos debe ser un número entero no negativo.";
         } else {
             // Insertar los datos en la tabla `units`
-            $query = "INSERT INTO units (uuid, facility_id, unit_name, number_of_rooms, obs, active, operation, user_modif, datetime_modif)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $result = sqlStatement($query, [$uuid, $centroId, $unitName, $numberOfRooms, $obs, $active, $operation, $userModif, $datetimeModif]);
+            $query = "INSERT INTO units (uuid, facility_id, unit_name, number_of_rooms, obs, active, operation, user_modif, datetime_modif, floor)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $result = sqlStatement($query, [$uuid, $centroId, $unitName, $numberOfRooms, $obs, $active, $operation, $userModif, $datetimeModif, $floor]);
 
             // Verificar si la inserción tuvo éxito
             if ($result) {
-                    // Redirigir al formulario list_units.php con el ID y nombre del centro
-                    header("Location: list_units.php?centro_id=" . htmlspecialchars($centroId) . "&centro_name=" . htmlspecialchars($centroName));
-                    exit;
+                // Redirigir al formulario list_units.php con el ID y nombre del centro
+                header("Location: list_units.php?centro_id=" . htmlspecialchars($centroId) . "&centro_name=" . htmlspecialchars($centroName));
+                exit;
             } else {
                 $warningMessage = "Error al insertar la Unidad.";
             }
         }
     }    
-    
 }
