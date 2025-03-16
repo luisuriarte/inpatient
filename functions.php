@@ -1,22 +1,6 @@
 <?php
 
 require_once(__DIR__ . "/../interface/globals.php");
-require_once($GLOBALS['srcdir'] . '/patient.inc.php');
-require_once($GLOBALS['srcdir'] . '/forms.inc.php');
-require_once($GLOBALS['srcdir'] . '/calendar.inc.php');
-require_once($GLOBALS['srcdir'] . '/options.inc.php');
-require_once($GLOBALS['srcdir'] . '/encounter_events.inc.php');
-require_once($GLOBALS['srcdir'] . '/patient_tracker.inc.php');
-require_once($GLOBALS['incdir'] . "/main/holidays/Holidays_Controller.php");
-require_once($GLOBALS['srcdir'] . '/group.inc.php');
-
-use OpenEMR\Common\Acl\AclMain;
-use OpenEMR\Common\Twig\TwigContainer;
-use OpenEMR\Core\Header;
-use OpenEMR\Events\Appointments\AppointmentSetEvent;
-use OpenEMR\Events\Appointments\AppointmentRenderEvent;
-use OpenEMR\Events\Appointments\AppointmentDialogCloseEvent;
-use OpenEMR\Common\Logging\SystemLogger;
 
 function getCentros($showInactive) {
     $query = "SELECT * FROM facility WHERE 1";

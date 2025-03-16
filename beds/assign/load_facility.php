@@ -13,7 +13,7 @@ while ($row = sqlFetchArray($result)) {
     $units[] = [
         'id' => $row['id'],
         'unit_name' => $row['unit_name'],
-        'number_of_rooms' => $row['number_of_rooms'],
+        'number_of_units' => $row['number_of_units'],
         'obs' => $row['obs']
     ];
 }

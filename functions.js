@@ -79,12 +79,4 @@ timeline.on('currentTimeTick', function() {
     });
 });
 
-function validatePatientSelection() {
-    if (empty($GLOBALS['pid']) || empty($GLOBALS['patient_name'])) {
-        $title = xlt('Patient Search');
-        alert(xlt('First you must choose a patient'));
-        dlgopen('find_patient_popup.php', 'findPatient', 650, 300, '', $title);
-        return false;
-    }
-    return true;
-}
+//

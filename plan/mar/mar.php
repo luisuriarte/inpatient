@@ -2,17 +2,8 @@
 // Ensure the user is authenticated and load the globals
 require_once("../../functions.php");
 require_once('../../../interface/globals.php');
-//require_once(__DIR__ . "../../../interface/globals.php");
 require_once($GLOBALS['srcdir'] . '/patient.inc.php');
-require_once($GLOBALS['srcdir'] . '/forms.inc.php');
-require_once($GLOBALS['srcdir'] . '/calendar.inc.php');
 require_once($GLOBALS['srcdir'] . '/options.inc.php');
-require_once($GLOBALS['srcdir'] . '/encounter_events.inc.php');
-require_once($GLOBALS['srcdir'] . '/patient_tracker.inc.php');
-require_once($GLOBALS['incdir'] . "/main/holidays/Holidays_Controller.php");
-require_once($GLOBALS['srcdir'] . '/group.inc.php');
-
-use OpenEMR\Core\Header;
 
 // Capturar valores del formulario
 $selected_facility = $_POST['facility_id'] ?? '';
@@ -27,6 +18,11 @@ $userFullName = getUserFullName($userId);
 // The patient ID and name should be already available
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
+
+// Ensure a patient is selected
+//if (!$patient_id) {
+//    die(xlt('No patient selected.'));
+//}
 
 // Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
@@ -87,6 +83,7 @@ $result = sqlStatement($sql_query);
     <title><?php echo xlt('Medical Administration Record (MAR)'); ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="../../styles.css">
@@ -95,13 +92,7 @@ $result = sqlStatement($sql_query);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <!-- Incluir moment.js -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/es.js"></script> -->
-
-    <style>
-
-    </style>
+    <!-- <script src="../../functions.js"></script> -->
 
 </head>
 
@@ -172,8 +163,7 @@ $result = sqlStatement($sql_query);
             </div>
         </div>
     </form>
-    <h1><?php echo xl('Medical Administration Record MAR'); ?></h1>
-
+    <h1><?php echo xl('Medical Administration Record MAR') . ' - ' . $GLOBALS['patient_name'] . ' - ' . $GLOBALS['pid']; ?></h1>
     <!-- Aquí se incluirá el timeline -->
     <div id="visualization"></div>
     <!-- Botones inferiores -->
@@ -181,12 +171,42 @@ $result = sqlStatement($sql_query);
         <button type="button" class="btn btn-secondary" onclick="window.location.href='../plan.php';">
             <i class="fas fa-home"></i> <?php echo xlt('Back to Plan'); ?>
         </button>
-        <button type="button" class="btn btn-primary" 
-            onclick="return validatePatientSelection() ? $('#openMedicationModal<?= attr($patient_id) ?>').modal('show') : false;">
+        <!-- Botón para medicar -->
+        <button type="button" class="btn btn-primary" id="orderMedicationButton">
             <?php echo xlt('Order New Medication'); ?>
         </button>
     </div>
-    
+    <!-- Patient Search Modal -->
+    <div class="modal fade" id="inpatientSearchModal" tabindex="-1" aria-labelledby="inpatientSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inpatientSearchModalLabel">
+                        <i class="material-icons">search</i> <?php echo xlt('Search Admitted Patients'); ?>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo xlt('Close'); ?>"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="inpatientSearchForm" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" id="searchQuery" name="searchQuery" class="form-control" placeholder="<?php echo xlt('Search by name, ID, room, unit, sector, or floor...'); ?>">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="material-icons">search</i> <?php echo xlt('Search'); ?>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="searchResults" class="table-responsive">
+                        <!-- Search results will be displayed here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="material-icons">close</i> <?php echo xlt('Close'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
         var now = new Date(); // Obtener la fecha y hora actual
         var start = new Date(now.getTime() - 1000 * 60 * 30); // Media hora antes de la hora actual
@@ -595,26 +615,90 @@ $result = sqlStatement($sql_query);
                 $('#notificationFields').hide();  
             }
         }
-
-        function validatePatientSelection() {
-            var patientId = $('#pid').val();
-            var patientName = $('#patient_name').val();
-            
-            if (!patientId || !patientName) {
-                const title = <?php echo xlj('Patient Search'); ?>;
-                alert(<?php echo xlj('First you must choose a patient'); ?>);
-                //dlgopen('../../../interface/main/calendar/find_patient_popup.php', 'findPatient', 650, 300, '', title);
-                dlgopen('<?php echo $GLOBALS['webroot']; ?>/interface/main/calendar/find_patient_popup.php', '_blank', 500, 400, title);
-                return false;
+ 
+        $(document).ready(function() {
+            // Función para validar la selección del paciente
+            function validatePatientSelection() {
+                const pid = <?php echo json_encode($GLOBALS['pid'] ?? null); ?>;
+                if (!pid) {
+                    alert(<?php echo xlj('First you must choose a patient'); ?>);
+                    $('#inpatientSearchModal').modal('show'); // Abrir el modal de búsqueda
+                    return false;
+                }
+                return true;
             }
-            return true;
-        }
+
+            // Manejar el clic en el botón de medicar
+            $('#orderMedicationButton').on('click', function() {
+                if (validatePatientSelection()) {
+                    $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
+                }
+            });
+
+            // Evitar el envío tradicional del formulario de búsqueda
+            $('#inpatientSearchForm').on('submit', function(event) {
+                event.preventDefault(); // Evitar que el formulario se envíe de manera tradicional
+
+                const searchQuery = $('#searchQuery').val();
+
+                // Realizar la búsqueda con AJAX
+                $.ajax({
+                    url: 'search_inpatients.php',
+                    method: 'POST',
+                    data: { searchQuery: searchQuery },
+                    success: function(response) {
+                        $('#searchResults').html(response); // Mostrar los resultados en el modal
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                        $('#searchResults').html('<div class="alert alert-danger">Error al realizar la búsqueda.</div>');
+                    }
+                });
+            });
+
+            // Manejar la selección de un paciente desde el modal
+            $(document).on('click', '.select-patient', function() {
+                const pid = $(this).data('pid');
+                console.log("Enviando PID:", pid); // Ver en consola del navegador
+
+                $('#inpatientSearchModal').modal('hide'); // Cerrar modal
+
+                $.ajax({
+                    url: 'set_patient_session.php',
+                    method: 'POST',
+                    data: { pid: pid },
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log("Respuesta del servidor:", response); // Debug
+                        if (response.status === 'success') {
+                            top.restoreSession();
+                            setTimeout(() => {
+                                // Ruta corregida para demographics.php
+                                const demographicsUrl = "../../../interface/patient_file/summary/demographics.php?set_pid=" + encodeURIComponent(pid);
+
+                                // Abrir demographics.php en una pestaña de OpenEMR
+                                top.navigateTab(1, demographicsUrl, 'demographics');
+
+                                // Redirigir mar.php en la pestaña actual
+                                top.restoreSession();
+                                top.RTop.location = "../../../inpatient/plan/mar/mar.php?set_pid=" + encodeURIComponent(pid);
+                            }, 500);
+                        } else {
+                            alert('Error del servidor: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error AJAX:', xhr.responseText);
+                        alert('Error inesperado: ' + xhr.responseText);
+                    }
+                });
+            });
+
+        });
+
     </script>
 
     <?php include 'modal_order_new_medication.php'; ?>
-    <script src="../../functions.js"></script>
-    <script type="text/javascript" src="../../../library/dialog.js?v=<?php echo $v_js_includes; ?>"></script>
-     
 
 <!-- Modal de dosis (marActionsModal) -->
 <div class="modal fade" id="marActionsModal" tabindex="-1" aria-labelledby="marActionsModalLabel" aria-hidden="true">
