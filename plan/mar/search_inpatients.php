@@ -1,10 +1,9 @@
 <?php
-// search_inpatients.php
 require_once("../../functions.php");
 require_once('../../../interface/globals.php');
 
 // Get the search term
-$searchQuery = $_POST['searchQuery'];
+$searchQuery = $_POST['searchQuery'] ?? '';
 
 // SQL query to search for admitted patients
 $sql = "
@@ -29,13 +28,11 @@ $sql = "
         AND bp.active = 1
 ";
 
-// Prepare and execute the query
 $result = sqlStatement($sql, [
     "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%",
     "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%"
 ]);
 
-// Display results
 if (sqlNumRows($result) > 0) {
     echo '<table class="table table-striped table-hover">
             <thead>
@@ -53,6 +50,7 @@ if (sqlNumRows($result) > 0) {
             </thead>
             <tbody>';
     while ($row = sqlFetchArray($result)) {
+        $patient_name = $row['lname'] . ', ' . $row['fname'] . ($row['mname'] ? ' ' . $row['mname'] : '');
         echo "<tr>
                 <td>" . text($row['lname']) . "</td>
                 <td>" . text($row['fname'] . ' ' . $row['mname']) . "</td>
@@ -65,7 +63,8 @@ if (sqlNumRows($result) > 0) {
                 <td>
                     <button class='btn btn-sm select-patient' 
                             style='background-color: #6f42c1; border-color: #6f42c1; color: #fff;' 
-                            data-pid='" . attr($row['pid']) . "'>
+                            data-pid='" . attr($row['pid']) . "' 
+                            data-name='" . attr($patient_name) . "'>
                         <i class='material-icons'>check</i> " . xlt('Select') . "
                     </button>
                 </td>
@@ -76,3 +75,35 @@ if (sqlNumRows($result) > 0) {
     echo '<div class="alert alert-warning">' . xlt('No results found') . '.</div>';
 }
 ?>
+
+<script src="<?php echo $GLOBALS['webroot']; ?>/library/js/jquery.min.js"></script>
+<script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
+<script>
+$(document).on('click', '.select-patient', function() {
+    const pid = $(this).data('pid');
+    const name = $(this).data('name');
+    console.log("Seleccionando PID:", pid, "Nombre:", name);
+
+    // Sincronizar la sesión
+    top.restoreSession();
+
+    // Establecer el paciente activo
+    parent.left_nav.setPatient(name, pid, "", "", "");
+
+    // Redirigir el marco derecho a main_screen.php
+    top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/main/main_screen.php?pid=" + encodeURIComponent(pid);
+
+    // Depuración: verificar cómo se abrió esta ventana
+    console.log("Es ventana emergente?", window.opener);
+    console.log("Es modal?", typeof parent.$, parent.$('#inpatientSearchModal').length);
+
+    // Intentar cerrar como modal (ajusta el ID si es diferente)
+    if (typeof parent.$ === 'function' && parent.$('#inpatientSearchModal').length > 0) {
+        parent.$('#inpatientSearchModal').modal('hide');
+    }
+    // Intentar cerrar como ventana emergente
+    else if (window.opener) {
+        window.close();
+    }
+});
+</script>

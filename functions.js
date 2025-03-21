@@ -79,4 +79,12 @@ timeline.on('currentTimeTick', function() {
     });
 });
 
+function topatient(newpid, enc) {
+    top.restoreSession();
+    if (enc > 0) {
+        top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/patient_file/summary/demographics.php?set_pid=" + encodeURIComponent(newpid) + "&set_encounterid=" + encodeURIComponent(enc);
+    } else {
+        top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/patient_file/summary/demographics.php?set_pid=" + encodeURIComponent(newpid);
+    }
+}
 //
