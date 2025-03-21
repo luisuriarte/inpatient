@@ -77,7 +77,6 @@ if (sqlNumRows($result) > 0) {
 ?>
 
 <script src="<?php echo $GLOBALS['webroot']; ?>/library/js/jquery.min.js"></script>
-<script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
 <script>
 $(document).on('click', '.select-patient', function() {
     const pid = $(this).data('pid');
@@ -88,22 +87,15 @@ $(document).on('click', '.select-patient', function() {
     top.restoreSession();
 
     // Establecer el paciente activo
-    parent.left_nav.setPatient(name, pid, "", "", "");
+    top.left_nav.setPatient(name, pid, "", "", "");
 
-    // Redirigir el marco derecho a main_screen.php
+    // Redirigir el marco derecho al dashboard
     top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/main/main_screen.php?pid=" + encodeURIComponent(pid);
 
-    // Depuración: verificar cómo se abrió esta ventana
-    console.log("Es ventana emergente?", window.opener);
-    console.log("Es modal?", typeof parent.$, parent.$('#inpatientSearchModal').length);
+    // Cerrar el modal con Bootstrap 5
+    top.$('#inpatientSearchModal').modal('hide');
 
-    // Intentar cerrar como modal (ajusta el ID si es diferente)
-    if (typeof parent.$ === 'function' && parent.$('#inpatientSearchModal').length > 0) {
-        parent.$('#inpatientSearchModal').modal('hide');
-    }
-    // Intentar cerrar como ventana emergente
-    else if (window.opener) {
-        window.close();
-    }
+    // Depuración
+    console.log("Intentando cerrar modal:", typeof top.$, top.$('#inpatientSearchModal').length);
 });
 </script>
