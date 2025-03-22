@@ -35,6 +35,19 @@ $userFullName = getUserFullName($userId);
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
 
+// Función para verificar si el paciente está internado
+function isPatientAdmitted($pid) {
+    $sql = "
+        SELECT COUNT(*) as admitted
+        FROM beds_patients bp
+        WHERE bp.patient_id = ?
+        AND bp.condition = 'occupied'
+        AND bp.active = 1
+    ";
+    $result = sqlQuery($sql, [$pid]);
+    return $result['admitted'] > 0;
+}
+
 // Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
 $units = $selected_facility ? sqlStatement("SELECT id, unit_name FROM units WHERE facility_id = ? AND floor = ? AND active = 1", [$selected_facility, $selected_floor]) : [];
@@ -623,30 +636,44 @@ $result = sqlStatement($sql_query);
             }
         }
  
-        // Validación para Order New Medication
-        function validatePatientSelection() {
+// Validación para Order New Medication con AJAX
+function validatePatientSelection(callback) {
             const pid = <?php echo json_encode($GLOBALS['pid'] ?? null); ?>;
             if (!pid) {
                 alert(<?php echo xlj('Please select an admitted patient'); ?>);
                 $('#inpatientSearchModal').modal('show');
-                return false;
+                callback(false);
             } else {
-                const isAdmitted = <?php echo json_encode(!empty($patient_id) && isPatientAdmitted($patient_id)); ?>;
-                if (!isAdmitted) {
-                    alert(<?php echo xlj('This patient is not admitted, please admit them first or select another patient'); ?>);
-                    $('#inpatientSearchModal').modal('show');
-                    return false;
-                }
-                return true;
+                $.ajax({
+                    url: 'check_admitted.php', // Nuevo archivo para verificar estado
+                    method: 'POST',
+                    data: { pid: pid },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.isAdmitted) {
+                            callback(true);
+                        } else {
+                            alert(<?php echo xlj('This patient is not admitted, please admit them first or select another patient'); ?>);
+                            $('#inpatientSearchModal').modal('show');
+                            callback(false);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al verificar paciente:', error);
+                        alert('Error al verificar el estado del paciente');
+                        callback(false);
+                    }
+                });
             }
         }
 
         $('#orderMedicationButton').on('click', function() {
-            if (validatePatientSelection()) {
-                // Lógica para abrir el modal de nueva medicación
-                console.log("Abrir modal de nueva medicación para PID:", <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>);
-                // Ejemplo: $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
-            }
+            validatePatientSelection(function(isValid) {
+                if (isValid) {
+                    console.log("Abrir modal de nueva medicación para PID:", <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>);
+                    // Ejemplo: $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
+                }
+            });
         });
 
         $('#inpatientSearchForm').on('submit', function(event) {
@@ -670,6 +697,8 @@ $result = sqlStatement($sql_query);
         $(document).on('closeInpatientSearchModal', function() {
             $('#inpatientSearchModal').modal('hide');
             console.log("Modal cerrado vía evento desde mar.php");
+            // Recargar la página para actualizar $GLOBALS['pid']
+            window.location.reload();
         });
 
     </script>
