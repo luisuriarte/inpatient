@@ -35,19 +35,6 @@ $userFullName = getUserFullName($userId);
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
 
-// Función para verificar si el paciente está internado
-function isPatientAdmitted($pid) {
-    $sql = "
-        SELECT COUNT(*) as admitted
-        FROM beds_patients bp
-        WHERE bp.patient_id = ?
-        AND bp.condition = 'occupied'
-        AND bp.active = 1
-    ";
-    $result = sqlQuery($sql, [$pid]);
-    return $result['admitted'] > 0;
-}
-
 // Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
 $units = $selected_facility ? sqlStatement("SELECT id, unit_name FROM units WHERE facility_id = ? AND floor = ? AND active = 1", [$selected_facility, $selected_floor]) : [];
@@ -653,7 +640,7 @@ $result = sqlStatement($sql_query);
                         if (response.isAdmitted) {
                             callback(true);
                         } else {
-                            alert(<?php echo xlj('This patient is not admitted, please admit them first or select another patient'); ?>);
+                            alert("The patient <?php echo htmlspecialchars($GLOBALS['patient_name'] ?? ''); ?>, is not admitted. Please admit them or select another.");
                             $('#inpatientSearchModal').modal('show');
                             callback(false);
                         }
