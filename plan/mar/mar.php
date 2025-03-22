@@ -188,7 +188,7 @@ $result = sqlStatement($sql_query);
             </div>
         </div>
     </form>
-    <h1><?php echo xl('Medical Administration Record MAR') . ' - ' . ($GLOBALS['patient_name'] ?? 'No patient selected') . ' - ' . ($GLOBALS['pid'] ?? 'N/A'); ?></h1>
+    <h1><?php echo xl('Medical Administration Record MAR') ; ?></h1>
         <div id="visualization"></div>
         <div class="text-right mt-3">
             <button type="button" class="btn btn-secondary" onclick="window.location.href='../plan.php';">
@@ -636,8 +636,8 @@ $result = sqlStatement($sql_query);
             }
         }
  
-// Validación para Order New Medication con AJAX
-function validatePatientSelection(callback) {
+        // Validación para Order New Medication con AJAX
+        function validatePatientSelection(callback) {
             const pid = <?php echo json_encode($GLOBALS['pid'] ?? null); ?>;
             if (!pid) {
                 alert(<?php echo xlj('Please select an admitted patient'); ?>);
@@ -645,7 +645,7 @@ function validatePatientSelection(callback) {
                 callback(false);
             } else {
                 $.ajax({
-                    url: 'check_admitted.php', // Nuevo archivo para verificar estado
+                    url: 'check_admitted.php',
                     method: 'POST',
                     data: { pid: pid },
                     dataType: 'json',
@@ -667,12 +667,19 @@ function validatePatientSelection(callback) {
             }
         }
 
+        // Evitar doble clic
+        let isProcessing = false;
         $('#orderMedicationButton').on('click', function() {
+            if (isProcessing) return;
+            isProcessing = true;
+
             validatePatientSelection(function(isValid) {
                 if (isValid) {
-                    console.log("Abrir modal de nueva medicación para PID:", <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>);
-                    // Ejemplo: $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
+                    const pid = <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>;
+                    console.log("Abrir modal de nueva medicación para PID:", pid);
+                    $('#openMedicationModal' + pid).modal('show');
                 }
+                isProcessing = false;
             });
         });
 
@@ -697,7 +704,6 @@ function validatePatientSelection(callback) {
         $(document).on('closeInpatientSearchModal', function() {
             $('#inpatientSearchModal').modal('hide');
             console.log("Modal cerrado vía evento desde mar.php");
-            // Recargar la página para actualizar $GLOBALS['pid']
             window.location.reload();
         });
 
