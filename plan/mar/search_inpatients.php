@@ -89,13 +89,24 @@ $(document).on('click', '.select-patient', function() {
     // Establecer el paciente activo
     top.left_nav.setPatient(name, pid, "", "", "");
 
-    // Redirigir el marco derecho al dashboard
-    top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/main/main_screen.php?pid=" + encodeURIComponent(pid);
+    // Redirigir al dashboard (demographics.php)
+    top.RTop.location = "<?php echo $GLOBALS['webroot']; ?>/interface/patient_file/summary/demographics.php?set_pid=" + encodeURIComponent(pid);
 
-    // Cerrar el modal con Bootstrap 5
-    top.$('#inpatientSearchModal').modal('hide');
+    // Disparar evento para cerrar el modal
+    top.$(document).trigger('closeInpatientSearchModal');
 
-    // Depuración
-    console.log("Intentando cerrar modal:", typeof top.$, top.$('#inpatientSearchModal').length);
+    // Recargar mar.php en su pestaña
+    const marWindow = top.window.open('', 'marWindow');
+    if (marWindow) {
+        marWindow.location.href = "<?php echo $GLOBALS['webroot']; ?>/inpatient/plan/mar/mar.php";
+        console.log("mar.php recargado en su pestaña");
+    } else {
+        console.log("No se encontró la pestaña de mar.php");
+    }
 });
+
+// Guardar referencia a la ventana de mar.php al cargar
+if (window.name !== 'marWindow') {
+    window.name = 'marWindow';
+}
 </script>

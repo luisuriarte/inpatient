@@ -35,11 +35,6 @@ $userFullName = getUserFullName($userId);
 $patient_id = isset($patient_id) ? $patient_id : null;
 $patient_name = isset($patient_name) ? $patient_name : '';
 
-// Ensure a patient is selected
-//if (!$patient_id) {
-//    die(xlt('No patient selected.'));
-//}
-
 // Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
 $units = $selected_facility ? sqlStatement("SELECT id, unit_name FROM units WHERE facility_id = ? AND floor = ? AND active = 1", [$selected_facility, $selected_floor]) : [];
@@ -108,6 +103,7 @@ $result = sqlStatement($sql_query);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
     <!-- <script src="../../functions.js"></script> -->
 
 </head>
@@ -180,14 +176,11 @@ $result = sqlStatement($sql_query);
         </div>
     </form>
     <h1><?php echo xl('Medical Administration Record MAR') . ' - ' . ($GLOBALS['patient_name'] ?? 'No patient selected') . ' - ' . ($GLOBALS['pid'] ?? 'N/A'); ?></h1>
-        <!-- Aquí se incluirá el timeline -->
         <div id="visualization"></div>
-        <!-- Botones inferiores -->
-        <div class="text-right">
+        <div class="text-right mt-3">
             <button type="button" class="btn btn-secondary" onclick="window.location.href='../plan.php';">
                 <i class="fas fa-home"></i> <?php echo xlt('Back to Plan'); ?>
             </button>
-            <!-- Botón para medicar -->
             <button type="button" class="btn btn-primary" id="orderMedicationButton">
                 <?php echo xlt('Order New Medication'); ?>
             </button>
@@ -211,9 +204,7 @@ $result = sqlStatement($sql_query);
                                 </button>
                             </div>
                         </form>
-                        <div id="searchResults" class="table-responsive">
-                            <!-- Search results will be displayed here -->
-                        </div>
+                        <div id="searchResults" class="table-responsive"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -632,20 +623,29 @@ $result = sqlStatement($sql_query);
             }
         }
  
-        $(document).ready(function() {
+        // Validación para Order New Medication
         function validatePatientSelection() {
             const pid = <?php echo json_encode($GLOBALS['pid'] ?? null); ?>;
             if (!pid) {
-                alert(<?php echo xlj('First you must choose a patient'); ?>);
+                alert(<?php echo xlj('Please select an admitted patient'); ?>);
                 $('#inpatientSearchModal').modal('show');
                 return false;
+            } else {
+                const isAdmitted = <?php echo json_encode(!empty($patient_id) && isPatientAdmitted($patient_id)); ?>;
+                if (!isAdmitted) {
+                    alert(<?php echo xlj('This patient is not admitted, please admit them first or select another patient'); ?>);
+                    $('#inpatientSearchModal').modal('show');
+                    return false;
+                }
+                return true;
             }
-            return true;
         }
 
         $('#orderMedicationButton').on('click', function() {
             if (validatePatientSelection()) {
-                $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
+                // Lógica para abrir el modal de nueva medicación
+                console.log("Abrir modal de nueva medicación para PID:", <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>);
+                // Ejemplo: $('#openMedicationModal' + <?php echo json_encode($GLOBALS['pid'] ?? ''); ?>).modal('show');
             }
         });
 
@@ -666,8 +666,11 @@ $result = sqlStatement($sql_query);
                 }
             });
         });
-    });
 
+        $(document).on('closeInpatientSearchModal', function() {
+            $('#inpatientSearchModal').modal('hide');
+            console.log("Modal cerrado vía evento desde mar.php");
+        });
 
     </script>
 

@@ -54,19 +54,19 @@ $backgroundPatientCard = "#f6f9bc";
     ?>
     <!-- Iconos del Pizarrón -->
 	<div class="icon-container">
-		<!-- Botón para Asignar Cama -->
+		<!-- Botón para MAR -->
 		<button class="btn btn-custom btn-primary-custom" onclick="window.location.href='mar/mar.php?patient_id=<?php echo $patient_id; ?>&patient_name=<?php echo urlencode($patient_name); ?>'">
             <i class="fa-solid fa-bed-pulse fa-2x mb-2 fa-2x mb-2"></i>
 			<p><?php echo xl('Medical Administration Recod (MAR)'); ?></p>
 		</button>
 
-		<!-- Botón para Mover Paciente -->
+		<!-- Botón para Care Plan -->
 		<button class="btn btn-custom btn-secondary-custom" onclick="window.location.href='../../interface/main/main_screen.php?auth=login&site=<?php echo attr_url($_SESSION['site_id']); ?>'">
 			<i class="fa-solid fa-kit-medical fa-2x mb-2"></i>
 			<p><?php echo xl('Care Plan Overview'); ?></p>
 		</button>
 
-		<!-- Botón para Buscar -->
+		<!-- Botón para Patient Assessment -->
 		<button class="btn btn-custom btn-danger-custom" onclick="window.location.href='patient_assessment.php?patient_id=<?php echo $patient_id; ?>&patient_name=<?php echo urlencode($patient_name); ?>'">
 			<i class="fa-solid fa-heart-pulse fa-2x mb-2"></i>
 			<p><?php echo xl('Patient Assessment'); ?></p>
