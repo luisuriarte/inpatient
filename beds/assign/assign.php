@@ -7,14 +7,6 @@ require_once("../../../interface/globals.php");
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
-// Verificar si se ha seleccionado un paciente
-//if (empty($patient_id) || empty($patient_name)) {
-//    echo "<script>
-//        alert('" . xla('First you must choose a patient') . "');
-//        window.location.href = '../../../interface/main/finder/dynamic_finder.php';
-//    </script>";
-//    exit;
-//}
 $backgroundPatientCard = "#f6f9bc";
 ?>
 
