@@ -7,15 +7,6 @@ require_once("../../../interface/globals.php");
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
-// Verificar si se ha seleccionado un paciente
-//if (empty($patient_id) || empty($patient_name)) {
-//    echo "<script>
-//        alert('" . xla('First you must choose a patient') . "');
-//        window.location.href = '../../../interface/list_patient.php';
-//    </script>";
-//    exit;
-//}
-
 $patientIdRelocate = isset($_GET['patient_id_relocate']) ? htmlspecialchars($_GET['patient_id_relocate']) : null;
 $patientNameRelocate = isset($_GET['patient_name_relocate']) ? htmlspecialchars($_GET['patient_name_relocate']) : null;
 $patientDniRelocate = isset($_GET['patient_dni_relocate']) ? htmlspecialchars($_GET['patient_dni_relocate']) : null;
