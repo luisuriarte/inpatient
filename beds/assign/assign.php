@@ -36,13 +36,6 @@ $backgroundPatientCard = "#f6f9bc";
             <p><?php echo xl('Rooms Board'); ?></p>
         </a>
 
-        <!-- Botón para Mover Paciente -->
-        <!--
-        <a href="assign_bed.php?patient_id=<?php echo $patient_id; ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Relocation" class="btn btn-custom btn-secondary-custom">
-            <i class="fas fa-arrows-alt fa-2x mb-2"></i>
-            <p><?php echo xl('Patient Relocation'); ?></p>
-        </a>
-        -->
         <!-- Botón para Buscar -->
         <a href="patient_search.php?patient_id=<?php echo $patient_id; ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Search" class="btn btn-custom btn-danger-custom">
             <i class="fas fa-search fa-2x mb-2"></i>

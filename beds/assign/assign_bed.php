@@ -1,56 +1,80 @@
 <?php
-
 require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
-// Obtener datos del usuario de la sesión
+// Iniciar sesión y usar un subespacio
+session_start();
+$sessionKey = 'bed_management';
+
+// Obtener usuario autenticado
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
-$patientIdRelocate = isset($_GET['patient_id_relocate']) ? htmlspecialchars($_GET['patient_id_relocate']) : null;
-$patientNameRelocate = isset($_GET['patient_name_relocate']) ? htmlspecialchars($_GET['patient_name_relocate']) : null;
-$patientDniRelocate = isset($_GET['patient_dni_relocate']) ? htmlspecialchars($_GET['patient_dni_relocate']) : null;
-$patientAgeRelocate = isset($_GET['patient_age_relocate']) ? htmlspecialchars($_GET['patient_age_relocate']) : null;
-$patientSexRelocate = isset($_GET['patient_sex_relocate']) ? htmlspecialchars($_GET['patient_sex_relocate']) : null;
-$insuranceNameRelocate = isset($_GET['insurance_name_relocate']) ? htmlspecialchars($_GET['insurance_name_relocate']) : null;
-$fromIdBedsPatients = htmlspecialchars($_GET['from_id_beds_patients']) ?? null;
-$fromBedId = htmlspecialchars($_GET['from_bed_id']) ?? null;
-$fromRoomId = htmlspecialchars($_GET['from_room_id']) ?? null;
-$fromUnitId = htmlspecialchars($_GET['from_unit_id']) ?? null;
-$fromFacilityId = htmlspecialchars($_GET['from_facility_id']) ?? null;
-$bedAction = isset($_GET['bed_action']) ? htmlspecialchars($_GET['bed_action']) : null;
+// Recoger parámetros GET
+$bedAction = $_GET['bed_action'] ?? 'Assign';
+$view = $_GET['view'] ?? 'facilities';
+$facilityId = $_GET['facility_id'] ?? ($_SESSION[$sessionKey]['context']['facility_id'] ?? null);
+$facilityName = $_GET['facility_name'] ?? ($_SESSION[$sessionKey]['context']['facility_name'] ?? '');
+$unitId = $_GET['unit_id'] ?? ($_SESSION[$sessionKey]['context']['unit_id'] ?? null);
+$unitName = $_GET['unit_name'] ?? ($_SESSION[$sessionKey]['context']['unit_name'] ?? '');
+
+// Datos del paciente desde GET (Relocation o Assign) o sesión
+$patientData = [
+    'id' => $_GET['patient_id'] ?? $_GET['patient_id_relocate'] ?? ($_SESSION[$sessionKey]['patient_id'] ?? null),
+    'name' => $_GET['patient_name'] ?? $_GET['patient_name_relocate'] ?? ($_SESSION[$sessionKey]['patient_name'] ?? null),
+    'dni' => $_GET['patient_dni_relocate'] ?? ($_SESSION[$sessionKey]['patient_dni'] ?? null),
+    'age' => $_GET['patient_age_relocate'] ?? ($_SESSION[$sessionKey]['patient_age'] ?? null),
+    'sex' => $_GET['patient_sex_relocate'] ?? ($_SESSION[$sessionKey]['patient_sex'] ?? null),
+    'insurance' => $_GET['insurance_name_relocate'] ?? ($_SESSION[$sessionKey]['insurance_name'] ?? null),
+];
+
+// Guardar paciente en sesión si viene de Assign o Relocation
+if ($_GET['patient_id'] || $_GET['patient_id_relocate']) {
+    $_SESSION[$sessionKey]['patient_id'] = $patientData['id'];
+    $_SESSION[$sessionKey]['patient_name'] = $patientData['name'];
+    $_SESSION[$sessionKey]['patient_dni'] = $patientData['dni'];
+    $_SESSION[$sessionKey]['patient_age'] = $patientData['age'];
+    $_SESSION[$sessionKey]['patient_sex'] = $patientData['sex'];
+    $_SESSION[$sessionKey]['insurance_name'] = $patientData['insurance'];
+}
 
 // Variables para el manejo de vistas
-$view = 'facilities'; // Vista inicial
-$facilityName = ''; // Nombre del centro seleccionado
-$units = []; // Array para las unidades
-$rooms = []; // Array para los cuartos
+$facilityName = '';
+$units = [];
+$rooms = [];
 
-// Cambiar el título basado en el valor de bed_action
-switch ($bedAction) {
-    case 'Assign':
-        $bedActionTitle = xlt('Assign Bed to Patient'); // Título para asignar cama
-        $backgroundPatientCard = "#c2f9bc";
-        $modeText = 'Operations Mode';
-        $title_patient_name = $patient_name;
-        $title_patient_dni = $patient_dni;
-        $title_patient_age = $patient_age;
-        $title_patient_sex = $patient_sex;
-        $title_insurance_name = $insurance_name;
-        break;
-    case 'Relocation':
-        $bedActionTitle = xlt('Relocate Patient'); // Título para mover paciente
-        $backgroundPatientCard = "#f9e0bc";
-        $modeText = 'Relocation Mode';
-        $title_patient_name = $patientNameRelocate;
-        $title_patient_dni = $patientDniRelocate;
-        $title_patient_age = $patientAgeRelocate;
-        $title_patient_sex = $patientSexRelocate;
-        $title_insurance_name = $insuranceNameRelocate;
-        break;
-    default:
-        $bedActionTitle = xlt('Manage Bed Assignments'); // Título por defecto
+// Configurar título, color y modo según bedAction y presencia de paciente
+if ($patientData['id']) {
+    switch ($bedAction) {
+        case 'Assign':
+            $bedActionTitle = xlt('Assign Bed to Patient');
+            $backgroundPatientCard = '#c2f9bc';
+            $modeText = 'Operations Mode';
+            break;
+        case 'Relocation':
+            $bedActionTitle = xlt('Relocate Patient');
+            $backgroundPatientCard = '#f9e0bc';
+            $modeText = 'Relocation Mode';
+            break;
+        default:
+            $bedActionTitle = xlt('Manage Bed Assignments');
+            $backgroundPatientCard = null;
+            $modeText = '';
+    }
+} else {
+    $bedActionTitle = xlt('Manage Bed Assignments');
+    $backgroundPatientCard = null;
+    $modeText = '';
 }
+
+// Actualizar contexto en sesión
+$_SESSION[$sessionKey]['context'] = [
+    'facility_id' => $facilityId,
+    'facility_name' => $facilityName,
+    'unit_id' => $unitId,
+    'unit_name' => $unitName,
+    'background_card' => $backgroundPatientCard,
+];
 
 // Manejo de la lógica de selección
 if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
@@ -91,36 +115,21 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
 </head>
 <body>
 
-<?php
-    // Validar que al menos una variable tenga un valor no vacío y sin espacios en blanco
-//    if (trim($patient_id) !== '' || trim($patient_name) !== '') {
-        include '../../patient_header.html';
-//    }
-?>
-
-
 <div class="container mt-5">
+    <!-- Mostrar encabezado solo si hay paciente seleccionado -->
+        <?php if ($patientData['id']): ?>
+            <div class="patient-header">
+                <?php include '../../patient_header.html'; ?>
+            </div>
+        <?php endif; ?>
+
     <?php if ($view === 'facilities'): ?>
         <!-- Mostrar Centros -->
         <h1><?php echo xl('Select a Facility'); ?></h1>
         <div class="row">
             <?php foreach ($facilities as $facility): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
-                <div class="card facility-card text-center" onclick="window.location.href='?facility_id=<?php echo urlencode($facility['id']); ?>
-									&facility_name=<?php echo urlencode($facility['name']); ?>
-                                    &patient_name_relocate=<?php echo htmlspecialchars($patientNameRelocate); ?>
-                                    &patient_dni_relocate=<?php echo htmlspecialchars($patientDniRelocate); ?>
-                                    &patient_age_relocate=<?php echo htmlspecialchars($patientAgeRelocate); ?>
-                                    &patient_sex_relocate=<?php echo htmlspecialchars($patientSexRelocate); ?>
-                                    &insurance_name_relocate=<?php echo htmlspecialchars($insuranceNameRelocate); ?>
-                                    &patient_id_relocate=<?php echo htmlspecialchars($patientIdRelocate); ?>
-                                    &from_id_beds_patients=<?php echo htmlspecialchars($fromIdBedsPatients); ?>
-                                    &from_bed_id=<?php echo htmlspecialchars($fromBedId); ?>
-                                    &from_room_id=<?php echo htmlspecialchars($fromRoomId); ?>
-                                    &from_unit_id=<?php echo htmlspecialchars($fromUnitId); ?>
-                                    &from_facility_id=<?php echo htmlspecialchars($fromFacilityId); ?>
-									&bed_action=<?php echo $bedAction; ?>
-									&background_card=<?php echo htmlspecialchars($backgroundPatientCard); ?>'">
+                <div class="card facility-card text-center" onclick="window.location.href='?view=units&facility_id=<?php echo urlencode($facility['id']); ?>&facility_name=<?php echo urlencode($facility['name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-hospital-alt"></i>
@@ -240,23 +249,7 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
         <div class="row">
             <?php foreach ($units as $unit): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
-                    <div class="unit-card card text-center mx-2 mb-3" style="width: 18rem;" onclick="window.location.href='?facility_id=<?php echo urlencode($facilityId); ?>
-									&facility_name=<?php echo urlencode($facilityName); ?>
-									&unit_id=<?php echo urlencode($unit['id']); ?>
-									&unit_name=<?php echo urlencode($unit['unit_name']); ?>
-                                    &patient_name_relocate=<?php echo htmlspecialchars($patientNameRelocate); ?>
-                                    &patient_dni_relocate=<?php echo htmlspecialchars($patientDniRelocate); ?>
-                                    &patient_age_relocate=<?php echo htmlspecialchars($patientAgeRelocate); ?>
-                                    &patient_sex_relocate=<?php echo htmlspecialchars($patientSexRelocate); ?>
-                                    &insurance_name_relocate=<?php echo htmlspecialchars($insuranceNameRelocate); ?>
-                                    &patient_id_relocate=<?php echo htmlspecialchars($patientIdRelocate); ?>
-                                    &from_id_beds_patients=<?php echo htmlspecialchars($fromIdBedsPatients); ?>
-                                    &from_bed_id=<?php echo htmlspecialchars($fromBedId); ?>
-                                    &from_room_id=<?php echo htmlspecialchars($fromRoomId); ?>
-                                    &from_unit_id=<?php echo htmlspecialchars($fromUnitId); ?>
-                                    &from_facility_id=<?php echo htmlspecialchars($fromFacilityId); ?>
-									&bed_action=<?php echo $bedAction; ?>
-									&background_card=<?php echo htmlspecialchars($backgroundPatientCard); ?>'">
+                <div class="card unit-card text-center" onclick="window.location.href='?view=rooms&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&unit_id=<?php echo urlencode($unit['id']); ?>&unit_name=<?php echo urlencode($unit['unit_name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-hospital-alt"></i>
@@ -375,27 +368,7 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
         <div class="row">
             <?php foreach ($rooms as $room): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
-                <div class="room-card card text-center mx-2 mb-3" style="width: 18rem;" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>
-														&room_name=<?php echo urlencode($room['room_name']); ?>
-                                                        &room_sector=<?php echo urlencode($room['room_sector']); ?>
-														&unit_id=<?php echo urlencode($unitId); ?>
-														&unit_name=<?php echo urlencode($unitName); ?>
-                                                        &unit_floor=<?php echo urlencode($unitFloor); ?>
-														&facility_id=<?php echo urlencode($facilityId); ?>
-														&facility_name=<?php echo urlencode($facilityName); ?>
-                                                        &patient_name_relocate=<?php echo htmlspecialchars($patientNameRelocate); ?>
-                                                        &patient_dni_relocate=<?php echo htmlspecialchars($patientDniRelocate); ?>
-                                                        &patient_age_relocate=<?php echo htmlspecialchars($patientAgeRelocate); ?>
-                                                        &patient_sex_relocate=<?php echo htmlspecialchars($patientSexRelocate); ?>
-                                                        &insurance_name_relocate=<?php echo htmlspecialchars($insuranceNameRelocate); ?>
-                                                        &patient_id_relocate=<?php echo htmlspecialchars($patientIdRelocate); ?>
-                                                        &from_id_beds_patients=<?php echo htmlspecialchars($fromIdBedsPatients); ?>
-                                                        &from_bed_id=<?php echo htmlspecialchars($fromBedId); ?>
-                                                        &from_room_id=<?php echo htmlspecialchars($fromRoomId); ?>
-                                                        &from_unit_id=<?php echo htmlspecialchars($fromUnitId); ?>
-                                                        &from_facility_id=<?php echo htmlspecialchars($fromFacilityId); ?>
-														&bed_action=<?php echo urlencode($bedAction); ?>
-														&background_card=<?php echo urlencode($backgroundPatientCard); ?>'">
+                <div class="card room-card text-center" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_sector=<?php echo urlencode($room['room_sector']); ?>&unit_id=<?php echo urlencode($unitId); ?>&unit_name=<?php echo urlencode($unitName); ?>&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-hospital-alt"></i>
@@ -495,19 +468,13 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
             <?php endforeach; ?>
         <!-- Contenedor que incluye el botón y el cuadradito con texto -->
         <div style="display: flex; justify-content: space-between; align-items: center; position: relative; width: 100%;">
-            <!-- Botón -->
-            <a href="?facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>
-											&bed_action=<?php echo $bedAction; ?>
-											&background_card=<?php echo htmlspecialchars($backgroundPatientCard); ?>" 
-                                            class="btn btn-secondary mt-4"> 
-                <i class="fas fa-arrow-left"></i> <?php echo xl('Back to Units'); ?>
-            </a>
-
-            <!-- Cuadradito con texto alineado al borde derecho -->
-            <div style="display: flex; align-items: center; position: absolute; right: 0;">
-                <div style="width: 50px; height: 20px; background-color: <?php echo xlt($backgroundPatientCard) ?>; border: 1px solid #000; margin-right: 10px;"></div>
-                <span><?php echo $modeText; ?></span>
-            </div>
+            <a href="?view=units&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>" class="btn btn-secondary mt-4"><i class="fas fa-arrow-left"></i> <?php echo xlt('Back to Units'); ?></a>
+            <?php if ($patientData['id']): ?>
+                <div style="display: flex; align-items: center; position: absolute; right: 0;">
+                    <div style="width: 50px; height: 20px; background-color: <?php echo htmlspecialchars($backgroundPatientCard); ?>; border: 1px solid #000; margin-right: 10px;"></div>
+                    <span><?php echo $modeText; ?></span>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>
