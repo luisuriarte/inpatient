@@ -4,3 +4,4 @@ Admisión y asignación de camas para el paciente.
 MAR Registro de administración de medicamentos (Medical Administration Record)
 Se debe crear una carpeta inpatient en el directorio raiz de OpenEMR, colocar todo este contenido.
 Luego ejecutar inpatient.sql.
+Los scripts de inicio son plan/plan.php, beds/assign/assign.php y beds/crud/facilities.php
