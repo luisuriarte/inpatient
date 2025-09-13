@@ -349,7 +349,7 @@ $psStatus = $result['ps_status'];
                             <!-- Field: Unit Frequency -->
                             <div class="col-md-6">
                                 <label for="unit_frequency"><?php echo xlt('Frequency'); ?></label>
-                                <input type="number" class="form-control" id="unit_frequency" name="unit_frequency">
+                                <input type="number" class="form-control" id="unit_frequency" name="unit_frequency" value="<?php echo attr($unitFrequency); ?>">
                             </div>
 
                             <!-- Field: Time Frequency -->
@@ -361,7 +361,8 @@ $psStatus = $result['ps_status'];
                                     $time_unit_query = "SELECT option_id, title FROM list_options WHERE list_id='time_unit'";
                                     $time_unit_result = sqlStatement($time_unit_query);
                                     while ($time_unit = sqlFetchArray($time_unit_result)) {
-                                        echo '<option value="' . attr($time_unit['option_id']) . '">' . text($time_unit['title']) . '</option>';
+                                        $selected = ($time_unit['title'] == $timeFrequency) ? 'selected' : '';
+                                        echo '<option value="' . attr($time_unit['title']) . '" ' . $selected . '>' . text($time_unit['title']) . '</option>';
                                     }
                                     ?>
                                 </select>

@@ -103,9 +103,10 @@ $result = sqlStatement($sql_query);
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"></script>
     <script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
     <!-- <script src="../../functions.js"></script> -->
-
+     
 </head>
 
 <body>
@@ -215,6 +216,7 @@ $result = sqlStatement($sql_query);
             </div>
         </div>
     <script>
+        
         var now = new Date(); // Obtener la fecha y hora actual
         var start = new Date(now.getTime() - 1000 * 60 * 30); // Media hora antes de la hora actual
         var end = new Date(now.getTime() + 1000 * 60 * 60 * 24); // 24 horas después de la hora actual

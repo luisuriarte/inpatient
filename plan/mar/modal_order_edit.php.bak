@@ -1,0 +1,163 @@
+<?php
+// Incluir funciones y variables globales
+require_once("../../functions.php");
+require_once('../../../interface/globals.php');
+
+// Verificar sesión y permisos
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+    header('Location: ../../login.php');
+    exit;
+}
+
+// Verificar si se recibió el ID de la orden
+if (!isset($_GET['order_id'])) {
+    echo "Error: No se proporcionó ID de orden";
+    exit;
+}
+
+$order_id = intval($_GET['order_id']);
+
+// Obtener los datos de la orden actual
+$stmt = $pdo->prepare("
+    SELECT mo.*, m.name as medication_name, m.strength, m.unit, m.form 
+    FROM medication_orders mo
+    JOIN medications m ON mo.medication_id = m.id
+    WHERE mo.id = ?
+");
+$stmt->execute([$order_id]);
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$order) {
+    echo "Error: Orden no encontrada";
+    exit;
+}
+
+// Obtener lista de medicamentos para el dropdown
+$medications = $pdo->query("SELECT id, name, strength, unit, form FROM medications ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar Orden de Medicación</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="modal-body">
+    <form id="editScheduleModal">
+        <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
+        
+        <div class="form-group">
+            <label for="edit_medication_id">Medicamento</label>
+            <select class="form-control" id="edit_medication_id" name="medication_id" required>
+                <option value="">Seleccione un medicamento</option>
+                <?php foreach ($medications as $med): ?>
+                    <option value="<?php echo $med['id']; ?>" 
+                        <?php echo $med['id'] == $order['medication_id'] ? 'selected' : ''; ?>
+                        data-strength="<?php echo htmlspecialchars($med['strength']); ?>"
+                        data-unit="<?php echo htmlspecialchars($med['unit']); ?>"
+                        data-form="<?php echo htmlspecialchars($med['form']); ?>">
+                        <?php echo htmlspecialchars($med['name']); ?> 
+                        (<?php echo htmlspecialchars($med['strength'] . ' ' . $med['unit'] . ' - ' . $med['form']); ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_dosage">Dosis</label>
+            <input type="text" class="form-control" id="edit_dosage" name="dosage" value="<?php echo htmlspecialchars($order['dosage']); ?>" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_route">Vía de Administración</label>
+            <select class="form-control" id="edit_route" name="route" required>
+                <option value="Oral" <?php echo $order['route'] == 'Oral' ? 'selected' : ''; ?>>Oral</option>
+                <option value="Intravenosa" <?php echo $order['route'] == 'Intravenosa' ? 'selected' : ''; ?>>Intravenosa</option>
+                <option value="Intramuscular" <?php echo $order['route'] == 'Intramuscular' ? 'selected' : ''; ?>>Intramuscular</option>
+                <option value="Subcutánea" <?php echo $order['route'] == 'Subcutánea' ? 'selected' : ''; ?>>Subcutánea</option>
+                <option value="Tópica" <?php echo $order['route'] == 'Tópica' ? 'selected' : ''; ?>>Tópica</option>
+                <option value="Rectal" <?php echo $order['route'] == 'Rectal' ? 'selected' : ''; ?>>Rectal</option>
+                <option value="Oftálmica" <?php echo $order['route'] == 'Oftálmica' ? 'selected' : ''; ?>>Oftálmica</option>
+                <option value="Ótica" <?php echo $order['route'] == 'Ótica' ? 'selected' : ''; ?>>Ótica</option>
+                <option value="Nasal" <?php echo $order['route'] == 'Nasal' ? 'selected' : ''; ?>>Nasal</option>
+                <option value="Inhalatoria" <?php echo $order['route'] == 'Inhalatoria' ? 'selected' : ''; ?>>Inhalatoria</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_frequency">Frecuencia</label>
+            <input type="text" class="form-control" id="edit_frequency" name="frequency" value="<?php echo htmlspecialchars($order['frequency']); ?>" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_start_date">Fecha de Inicio</label>
+            <input type="datetime-local" class="form-control" id="edit_start_date" name="start_date" 
+                   value="<?php echo date('Y-m-d\TH:i', strtotime($order['start_date'])); ?>" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_end_date">Fecha de Fin (Opcional)</label>
+            <input type="datetime-local" class="form-control" id="edit_end_date" name="end_date" 
+                   value="<?php echo $order['end_date'] ? date('Y-m-d\TH:i', strtotime($order['end_date'])) : ''; ?>">
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_notes">Notas</label>
+            <textarea class="form-control" id="edit_notes" name="notes" rows="3"><?php echo htmlspecialchars($order['notes']); ?></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit_status">Estado</label>
+            <select class="form-control" id="edit_status" name="status" required>
+                <option value="active" <?php echo $order['status'] == 'active' ? 'selected' : ''; ?>>Activo</option>
+                <option value="on_hold" <?php echo $order['status'] == 'on_hold' ? 'selected' : ''; ?>>En espera</option>
+                <option value="completed" <?php echo $order['status'] == 'completed' ? 'selected' : ''; ?>>Completado</option>
+                <option value="cancelled" <?php echo $order['status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelado</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Actualizar información del medicamento al cambiar la selección
+    $('#edit_medication_id').change(function() {
+        var selected = $(this).find('option:selected');
+        var strength = selected.data('strength');
+        var unit = selected.data('unit');
+        var form = selected.data('form');
+        
+        // Puedes usar esta información para actualizar otros campos si es necesario
+    });
+    
+    // Manejar el envío del formulario
+    $('#editMedicationOrderForm').submit(function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: 'plan/mar/save_order_edit_medication.php',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                var result = JSON.parse(response);
+                if (result.success) {
+                    alert('Orden actualizada correctamente');
+                    $('#editMedicationModal').modal('hide');
+                    // Recargar la tabla o lista de órdenes
+                    loadMedicationOrders();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            },
+            error: function() {
+                alert('Error al comunicarse con el servidor');
+            }
+        });
+    });
+});
+</script>

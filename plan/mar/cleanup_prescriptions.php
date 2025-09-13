@@ -1,5 +1,5 @@
 <?php
-// larry :: hack add for command line version
+
 $_SERVER['REQUEST_URI'] = $_SERVER['PHP_SELF'];
 $_SERVER['SERVER_NAME'] = 'localhost';
 $backpic = "";
