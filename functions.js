@@ -8,7 +8,7 @@ function setupAutocomplete(inputId, modalId, hiddenInputId) {
             $('#' + inputId).autocomplete({
                 source: function(request, response) {
                     $.ajax({
-                        url: 'https://hcd.origen.ar/inpatient/search_users.php', // Ruta absoluta desde la raíz del dominio
+                        url: 'https://openemr-domain/inpatient/search_users.php', // Ruta absoluta desde la raíz del dominio
                         dataType: 'json',
                         data: { query: request.term },
                         success: function(data) {
