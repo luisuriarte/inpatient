@@ -9,10 +9,10 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="relocateForm<?= $bedPatient['id'] ?>" action="save_patient_relocate.php" method="POST">
-                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['id']; ?>">
+                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['bp_id']; ?>">
                     <input type="hidden" name="from_id_beds_patients" value="<?= $fromIdBedsPatients; ?>">
                     <!-- Campo oculto para el ID del paciente -->
-                    <input type="hidden" name="patient_id" value="<?= $patientIdRelocate ?>" />
+                    <input type="hidden" name="patient_id" value="<?= $patientData['id'] ?>" />
                     <!-- Campo oculto para el ID y datos de la cama -->
                     <input type="hidden" name="bed_id" value="<?= $bedPatient['bed_id'] ?>" />
                     <input type="hidden" name="bed_name" value="<?= $bedPatient['bed_name'] ?>" />
@@ -29,7 +29,7 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
                 
                 <div class="modal-header">
                     <h5 class="modal-title" id="relocateBedPatientModalLabel<?= $bedPatient['id'] ?>">
-                        <?= xlt('Patient') ?> <?= htmlspecialchars($patientNameRelocate) ?> <?= xlt('Moves to this bed') ?>: <?= htmlspecialchars($bedPatient['bed_name']) ?>
+                        <?= xlt('Patient') ?> <?= htmlspecialchars($patientData['name']) ?> <?= xlt('Moves to this bed') ?>: <?= htmlspecialchars($bedPatient['bed_name']) ?>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -94,7 +94,8 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
         setupAutocomplete(
             'autocompleteRelocate<?= $bedPatient['id'] ?>', 
             'relocateBedPatientModal<?= $bedPatient['id'] ?>', 
-            'responsibleRelocate<?= $bedPatient['id'] ?>'
+            'responsibleRelocate<?= $bedPatient['id'] ?>',
+            '../../search_users.php'
         );
     });
 </script>

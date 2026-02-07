@@ -14,6 +14,7 @@ $userFullName = getUserFullName($userId);
 // Recoger parámetros GET esenciales
 $roomId = $_GET['room_id'] ?? null;
 $bedAction = $_GET['bed_action'] ?? 'Assign';
+$fromIdBedsPatients = $_GET['from_id_beds_patients'] ?? null;
 
 // Almacenar contexto en sesión
 $context = [
@@ -25,28 +26,50 @@ $context = [
 ];
 $_SESSION[$sessionKey]['context'] = $context;
 
-// Datos del paciente desde GET o sesión
+// Datos del paciente: Priorizar GET, luego sesión local, luego sesión global de OpenEMR
+$patient_id = $_GET['patient_id'] ?? $_GET['patient_id_relocate'] ?? $_SESSION[$sessionKey]['patient_id'] ?? $_SESSION['pid'] ?? null;
+$patient_name = $_GET['patient_name'] ?? $_GET['patient_name_relocate'] ?? $_SESSION[$sessionKey]['patient_name'] ?? $_SESSION['patient_name'] ?? null;
+
+// DEBUG TEMPORAL: Mostrar variables recibidas
+// echo "<div class='alert alert-warning'>";
+// echo "DEBUG INFO:<br>";
+// echo "GET patient_id_relocate: " . ($_GET['patient_id_relocate'] ?? 'NULL') . "<br>";
+// echo "GET patient_id: " . ($_GET['patient_id'] ?? 'NULL') . "<br>";
+// echo "SESSION patient_id: " . ($_SESSION[$sessionKey]['patient_id'] ?? 'NULL') . "<br>";
+// echo "Calculated patient_id: " . ($patient_id ?? 'NULL') . "<br>";
+// echo "</div>";
+
+// Si tenemos ID pero no nombre, buscarlo
+if ($patient_id && empty($patient_name)) {
+    $patient_res = getPatientData($patient_id, "fname, lname, pubpid");
+    if ($patient_res) {
+        $patient_name = $patient_res['fname'] . ' ' . $patient_res['lname'];
+        $pubpid = $patient_res['pubpid'];
+    }
+}
+
 $patientData = [
-    'id' => $_GET['patient_id_relocate'] ?? ($_SESSION[$sessionKey]['patient_id'] ?? null),
-    'name' => $_GET['patient_name_relocate'] ?? ($_SESSION[$sessionKey]['patient_name'] ?? 'Unknown'),
+    'id' => $patient_id,
+    'name' => $patient_name ?? 'Unknown',
     'dni' => $_GET['patient_dni_relocate'] ?? ($_SESSION[$sessionKey]['patient_dni'] ?? 'Unknown'),
     'age' => $_GET['patient_age_relocate'] ?? ($_SESSION[$sessionKey]['patient_age'] ?? 'Unknown'),
     'sex' => $_GET['patient_sex_relocate'] ?? ($_SESSION[$sessionKey]['patient_sex'] ?? 'Unknown'),
     'insurance' => $_GET['insurance_name_relocate'] ?? ($_SESSION[$sessionKey]['insurance_name'] ?? 'Unknown'),
 ];
 
-// Guardar datos del paciente en sesión si vienen de Relocation o Assign
-if ($_GET['patient_id_relocate'] || $bedAction === 'Relocation') {
+// Sincronizar con el subespacio de sesión para persistencia
+if ($patientData['id'] && $patientData['id'] !== 'Unknown') {
     $_SESSION[$sessionKey]['patient_id'] = $patientData['id'];
     $_SESSION[$sessionKey]['patient_name'] = $patientData['name'];
-    $_SESSION[$sessionKey]['patient_dni'] = $patientData['dni'];
-    $_SESSION[$sessionKey]['patient_age'] = $patientData['age'];
-    $_SESSION[$sessionKey]['patient_sex'] = $patientData['sex'];
-    $_SESSION[$sessionKey]['insurance_name'] = $patientData['insurance'];
+    if (isset($pubpid)) $_SESSION[$sessionKey]['patient_pubpid'] = $pubpid;
+    if ($patientData['dni'] !== 'Unknown') $_SESSION[$sessionKey]['patient_dni'] = $patientData['dni'];
+    if ($patientData['age'] !== 'Unknown') $_SESSION[$sessionKey]['patient_age'] = $patientData['age'];
+    if ($patientData['sex'] !== 'Unknown') $_SESSION[$sessionKey]['patient_sex'] = $patientData['sex'];
+    if ($patientData['insurance'] !== 'Unknown') $_SESSION[$sessionKey]['insurance_name'] = $patientData['insurance'];
 }
 
 // Título según la acción
-$bedActionTitle = ($bedAction === 'Relocation') ? xlt('Patient Relocate') : xlt('Beds Assign');
+$bedActionTitle = ($bedAction === 'Relocation') ? xlt('Patient Relocate') : (($bedAction === 'Management') ? xlt('Inpatient Management Board') : xlt('Beds Assign'));
 
 // Obtener datos del cuarto, unidad y camas
 $query = "SELECT r.*, u.unit_name, lo.title AS floor_title, ls.title AS sector_title FROM rooms AS r 
@@ -61,8 +84,10 @@ $bedPatients = getBedsPatientsData($roomId);
 $roomName = $room['room_name'] ?? 'Unknown';
 $roomSector = $room['sector_title'] ?? $room['sector'] ?? 'Unknown';
 $unitName = $room['unit_name'] ?? $context['unit_name'] ?? 'Unknown';
+$unitId = $room['unit_id'] ?? $context['unit_id'] ?? null;
 $unitFloor = $room['floor_title'] ?? $context['unit_floor'] ?? 'Unknown';
 $facilityName = $context['facility_name'] ?? 'Unknown';
+$facilityId = $context['facility_id'] ?? null;
 
 // Manejar el cambio de estado "Made Up" (Cleaning -> Vacant)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bedPatientId'])) {
@@ -287,12 +312,11 @@ $additional_info = [
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#relocateBedPatientModal<?= $bedPatient['id'] ?>">
                                     <?php echo xlt('Select'); ?>
                                 </button>
-                            <?php else: ?>
-                                <!-- Botón Assign normal si no es Relocate -->
+                            <?php elseif ($bedAction === 'Assign'): ?>
+                                <!-- Botones solo en modo Assign -->
                                 <button id="assignBtn" type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
                                     <?php echo xlt('Assign'); ?>
                                 </button>
-                                <!-- Botón Reserve solo si no es Relocate -->
                                 <button id="reserveBtn" type="button" class="btn btn-secondary" onclick="checkPatientSelected('reserve', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
                                     <?php echo xlt('Reserve'); ?>
                                 </button>
@@ -306,16 +330,19 @@ $additional_info = [
                                     <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#reserveInfoModal<?= $bedPatient['id'] ?>">
                                         <?php echo xlt('Info'); ?>
                                     </button>
-                                <?php else: ?>
-                                    <!-- Botón Assign normal si no es Relocate -->
+                                <?php elseif ($bedAction === 'Assign'): ?>
+                                    <!-- Botón Assign y Release solo en modo Assign -->
                                     <button id="assignBtn" type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
                                         <?php echo xlt('Assign'); ?>
                                     </button>
-                                    <!-- Botón Release -->
                                     <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalBedRelease<?= $bedPatient['id'] ?>">
                                         <?php echo xlt('Release'); ?>
                                     </button>
-                                    <!-- Botón Information -->
+                                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#reserveInfoModal<?= $bedPatient['id'] ?>">
+                                        <?php echo xlt('Info'); ?>
+                                    </button>
+                                <?php else: ?>
+                                    <!-- Modo Management u otros: Solo Info -->
                                     <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#reserveInfoModal<?= $bedPatient['id'] ?>">
                                         <?php echo xlt('Info'); ?>
                                     </button>
@@ -324,47 +351,33 @@ $additional_info = [
                         <?php elseif (in_array('Cleaning', $conditions)): ?>
                             <?php if ($bedAction !== 'Relocation'): ?>
                                 <div class="d-inline-block">
-                                    <!-- Formulario para cambiar la condición de la cama -->
+                                    <!-- Made Up disponible en Assign y Management -->
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="bedPatientId" id="bedPatientId" value="<?php echo htmlspecialchars($bedPatient['id']); ?>">
                                         <button type="submit" class="btn btn-success"><?php echo xlt('Made Up'); ?></button>
                                     </form>
-                                    <!-- Botón Assign -->
-                                    <button type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
-                                        <?php echo xlt('Assign'); ?>
-                                    </button>
-                                    <!-- Botón Reserve -->
-                                    <button type="button" class="btn btn-secondary" onclick="checkPatientSelected('reserve', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
-                                        <?php echo xlt('Reserve'); ?>
-                                    </button>
+                                    
+                                    <?php if ($bedAction === 'Assign'): ?>
+                                        <!-- Assign/Reserve solo en modo Assign -->
+                                        <button type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
+                                            <?php echo xlt('Assign'); ?>
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="checkPatientSelected('reserve', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
+                                            <?php echo xlt('Reserve'); ?>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             <?php endif; ?>
 
                         <?php elseif (in_array('Occupied', $conditions)): ?>
-                            <?php if ($bedAction !== 'Relocation'): ?>
-                                <!-- Formulario para dar de alta al paciente solo si no es Relocate -->
+                            <?php if ($bedAction === 'Management'): ?>
+                                <!-- Alta y Reubicar solo en modo Management -->
                                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDischargePatient<?= $bedPatient['id'] ?>">
                                     <?php echo xlt('Discharge'); ?>
                                 </button>
-                            <?php endif; ?>
-                            <!-- Botón Relocate, oculto si es Relocation -->
-                            <?php if ($bedAction !== 'Relocation'): ?>
-                                <a href="assign_bed.php?from_id_beds_patients=<?= trim(htmlspecialchars($bedPatient['id'])) ?>
-                                                    &patient_id_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_id'])) ?>
-                                                    &patient_name_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_name'])) ?>
-                                                    &patient_dni_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_dni'])) ?>
-                                                    &patient_age_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_age'])) ?>
-                                                    &patient_sex_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_sex'])) ?>
-                                                    &insurance_name_relocate=<?= trim(htmlspecialchars($bedPatient['bed_patient_insurance_name'])) ?>
-                                                    &from_bed_id=<?= trim(htmlspecialchars($bedPatient['bed_id'])) ?>
-                                                    &from_room_id=<?= trim(htmlspecialchars($bedPatient['room_id'])) ?>
-                                                    &from_unit_id=<?= trim(htmlspecialchars($bedPatient['unit_id'])) ?>
-                                                    &from_facility_id=<?= trim(htmlspecialchars($bedPatient['facility_id'])) ?>
-                                                    &bed_action=Relocation" 
-                                class="btn btn-light">
+                                <a href="assign_bed.php?from_id_beds_patients=<?= urlencode(trim($bedPatient['bp_id'])) ?>&patient_id_relocate=<?= urlencode(trim($bedPatient['bed_patient_id'])) ?>&patient_name_relocate=<?= urlencode(trim($bedPatient['bed_patient_name'])) ?>&patient_dni_relocate=<?= urlencode(trim($bedPatient['bed_patient_dni'])) ?>&patient_age_relocate=<?= urlencode(trim($bedPatient['bed_patient_age'])) ?>&patient_sex_relocate=<?= urlencode(trim($bedPatient['bed_patient_sex'])) ?>&insurance_name_relocate=<?= urlencode(trim($bedPatient['bed_patient_insurance_name'])) ?>&from_bed_id=<?= urlencode(trim($bedPatient['bed_id'])) ?>&from_room_id=<?= urlencode(trim($bedPatient['room_id'])) ?>&from_unit_id=<?= urlencode(trim($bedPatient['unit_id'])) ?>&from_facility_id=<?= urlencode(trim($bedPatient['facility_id'])) ?>&bed_action=Relocation" class="btn btn-light">
                                     <?php echo xlt('Relocate'); ?>
                                 </a>
-
                             <?php endif; ?>
                             <!-- Botón Information, siempre debe mostrarse -->
                             <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#patientInfoModal<?= $bedPatient['id'] ?>">
@@ -408,7 +421,7 @@ $additional_info = [
     <?php endif; ?>
 
     <!-- Enlace para volver a la vista de cuartos -->
-    <a href="assign_bed.php?view=rooms&facility_id=<?= htmlspecialchars($context['facility_id']) ?>&unit_id=<?= htmlspecialchars($context['unit_id']) ?>" class="btn btn-secondary mt-3">
+    <a href="assign_bed.php?view=rooms&facility_id=<?= htmlspecialchars($context['facility_id']) ?>&unit_id=<?= htmlspecialchars($context['unit_id']) ?>&bed_action=<?= htmlspecialchars($bedAction) ?>&from_id_beds_patients=<?= htmlspecialchars($fromIdBedsPatients ?? '') ?>&patient_id_relocate=<?= htmlspecialchars($patientData['id'] ?? '') ?>&patient_name_relocate=<?= htmlspecialchars($patientData['name'] ?? '') ?>" class="btn btn-secondary mt-3">
         <i class="fas fa-arrow-left"></i> <?= xlt('Back to Rooms'); ?>
     </a>
 </div>

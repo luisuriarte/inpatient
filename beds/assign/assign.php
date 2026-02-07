@@ -41,14 +41,22 @@ $backgroundPatientCard = "#f6f9bc";
 <body>
 <div class="container mt-4">
     <!-- Iconos del Pizarrón -->
-    <div class="icon-container">
-        <!-- Botón para Asignar Cama -->
+    <div class="icon-container d-flex flex-wrap justify-content-center gap-4">
+        <!-- Botón para Ingreso / Reserva (Requiere Paciente) -->
         <a href="assign_bed.php?patient_id=<?php echo urlencode($patient_id); ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Assign" 
            class="btn btn-custom btn-primary-custom" 
-           id="roomsBoardBtn"
-           onclick="return handleRoomsBoardClick(event)">
-            <i class="fas fa-bed fa-2x mb-2"></i>
-            <p><?php echo xl('Rooms Board'); ?></p>
+           id="assignEntryBtn"
+           onclick="return handleEntryClick(event, true)">
+            <i class="fas fa-user-plus fa-2x mb-2"></i>
+            <p><?php echo xl('Patient Check-In / Reserve'); ?></p>
+        </a>
+
+        <!-- Botón para Gestión de Internación / Tablero (No requiere Paciente) -->
+        <a href="assign_bed.php?bed_action=Management" 
+           class="btn btn-custom btn-success-custom" 
+           id="managementEntryBtn">
+            <i class="fas fa-chalkboard-user fa-2x mb-2"></i>
+            <p><?php echo xl('Inpatient Management Board'); ?></p>
         </a>
 
         <!-- Botón para Buscar -->
@@ -63,17 +71,16 @@ $backgroundPatientCard = "#f6f9bc";
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script>
-function handleRoomsBoardClick(event) {
+function handleEntryClick(event, requiresPatient) {
     const patientId = "<?php echo $patient_id; ?>";
     
-    if (!patientId || patientId === "") {
+    if (requiresPatient && (!patientId || patientId === "")) {
         event.preventDefault();
-        alert("<?php echo xlt('Please select a patient first.'); ?>\n<?php echo xlt('Open Patient Finder Tab'); ?>");
+        alert("<?php echo xlt('Please select a patient first to proceed with Inpatient Check-In.'); ?>\n<?php echo xlt('Open Patient Finder Tab'); ?>");
         
-        // Intentar enfocar la pestaña de Patient Finder en OpenEMR (Varios métodos según versión)
+        // Intentar enfocar la pestaña de Patient Finder en OpenEMR
         const tabIds = ['finder', 'pat_finder'];
         let success = false;
-
         try {
             for (const id of tabIds) {
                 if (typeof top.focusTab === 'function') {
@@ -84,11 +91,6 @@ function handleRoomsBoardClick(event) {
                     success = true;
                 }
                 if (success) break;
-            }
-
-            if (!success) {
-                console.warn("No se encontró una función de OpenEMR compatible para cambiar de pestaña.");
-                // Si no se puede cambiar de pestaña, al menos ya se avisó al usuario con el alert.
             }
         } catch (e) {
             console.error("Error al intentar cambiar a la pestaña Finder:", e);

@@ -8,7 +8,7 @@ $query = $_GET['query'] ?? '';
 
 $sql = "SELECT u.id, CONCAT(u.lname, ' ', COALESCE(u.mname, ''), ' ', u.fname) AS full_name
         FROM users AS u
-        WHERE LOWER(CONCAT(u.lname, ' ', COALESCE(u.mname, ''), ' ', u.fname)) LIKE LOWER(?) AND ACTIVE = 1 AND cpoe IS NULL";
+        WHERE LOWER(CONCAT(u.lname, ' ', COALESCE(u.mname, ''), ' ', u.fname)) LIKE LOWER(?) AND ACTIVE = 1";
 
 $binds = ["%$query%"];
 

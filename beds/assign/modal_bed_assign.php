@@ -9,6 +9,7 @@ $behavioralRestrictions = sqlStatement("SELECT title FROM list_options WHERE lis
 $otherRestrictions = sqlStatement("SELECT title FROM list_options WHERE list_id = 'inpatient_other_restrictions'");
 
 // Consulta SQL para obtener los cuidados iniciales
+$careOptions = sqlStatement("SELECT title, notes FROM list_options WHERE list_id = 'inpatient_care' ORDER BY seq ASC");
 ?>
 <!-- Estilos adicionales -->
 <style>
@@ -242,7 +243,8 @@ $(document).ready(function() {
         setupAutocomplete(
             'autocompleteAssign<?= $bedPatient['id'] ?>', 
             'assignBedPatientModal<?= $bedPatient['id'] ?>', 
-            'responsibleAssign<?= $bedPatient['id'] ?>'
+            'responsibleAssign<?= $bedPatient['id'] ?>',
+            '../../search_users.php'
         );
     });
 

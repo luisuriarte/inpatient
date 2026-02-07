@@ -32,19 +32,22 @@ $bedAction = htmlspecialchars($_POST['bed_action']);
 $backgroundPatientCard = htmlspecialchars($_POST['background_card']);
 
 // Guardar los datos en la base de datos
-if ($bedsPatientsId && $responsibleUserId) {
+// bedsPatientsId puede ser null si es una cama nueva sin historial
+if ($responsibleUserId) {
     // Iniciar transacción
     $database->StartTrans();
 
     try {
-        // 1. Desactivar el registro actual (Vacant)
-        $updateQuery = "UPDATE beds_patients 
-                       SET active = 0, 
-                           operation = 'Archive (Pre-Reserve)', 
-                           user_modif = ?, 
-                           datetime_modif = ? 
-                       WHERE id = ? AND active = 1";
-        sqlStatement($updateQuery, [$userFullName, $datetimeModif, $bedsPatientsId]);
+        // 1. Desactivar el registro actual (Vacant) SOLO si existe
+        if ($bedsPatientsId) {
+            $updateQuery = "UPDATE beds_patients 
+                           SET active = 0, 
+                               operation = 'Archive (Pre-Reserve)', 
+                               user_modif = ?, 
+                               datetime_modif = ? 
+                           WHERE id = ? AND active = 1";
+            sqlStatement($updateQuery, [$userFullName, $datetimeModif, $bedsPatientsId]);
+        }
 
         // 2. Insertar nuevo registro con estado Reserved
         $insertQuery = "INSERT INTO beds_patients (

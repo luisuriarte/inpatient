@@ -112,14 +112,19 @@ function getFacilitiesWithBedsData() {
     $facilitiesResult = sqlStatement($facilitiesQuery);
     $facilities = [];
 
-    // Obtener las condiciones de las camas y sus iconos y colores
-    $bedConditionsQuery = "SELECT lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition'";
+    // Obtener las condiciones de las camas y sus iconos y colores (Excluyendo Archival)
+    $bedConditionsQuery = "SELECT lo.option_id, lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition' AND lo.option_id <> 'archival' ORDER BY lo.seq ASC";
     $conditionsResult = sqlStatement($bedConditionsQuery);
     $conditions = [];
     while ($row = sqlFetchArray($conditionsResult)) {
         // Separar icono y color usando el carácter | (pipe)
         list($icon, $color) = explode('|', $row['notes']);
-        $conditions[$row['title']] = ['icon' => $icon, 'color' => $color];
+        $conditions[] = [
+            'option_id' => $row['option_id'],
+            'title' => $row['title'],
+            'icon' => $icon,
+            'color' => $color
+        ];
     }
 
     while ($facility = sqlFetchArray($facilitiesResult)) {
@@ -130,18 +135,44 @@ function getFacilitiesWithBedsData() {
 
         // Contar las camas por condición
         $bedsConditions = [];
-        foreach ($conditions as $title => $data) {
-            $conditionQuery = "SELECT COUNT(*) AS count FROM beds_patients WHERE facility_id = ? AND `condition` = ? AND active = 1";
-            $conditionResult = sqlStatement($conditionQuery, [$facility['id'], $title]);
-            $count = sqlFetchArray($conditionResult)['count'];
-            if ($count > 0) {
-                $bedsConditions[] = [
-                    'title' => xl($title),
-                    'icon' => $data['icon'],
-                    'color' => $data['color'],
-                    'count' => $count
-                ];
+        $totalNonVacant = 0;
+        
+        // Identificar cuál es el option_id de 'vacant' para el cálculo final
+        $vacantData = null;
+
+        foreach ($conditions as $data) {
+            if ($data['option_id'] === 'vacant') {
+                $vacantData = $data;
+                continue; // Lo calculamos al final
             }
+
+            // Contar buscando en beds_patients pero validando la ubicación real de la cama en la tabla 'beds'
+            $conditionQuery = "SELECT COUNT(*) AS count 
+                               FROM beds_patients AS bp 
+                               INNER JOIN beds AS b ON bp.bed_id = b.id 
+                               WHERE b.facility_id = ? AND (bp.`condition` = ? OR bp.`condition` = ?) AND bp.active = 1 AND b.active = 1";
+            $conditionResult = sqlStatement($conditionQuery, [$facility['id'], $data['option_id'], $data['title']]);
+            $count = (int)sqlFetchArray($conditionResult)['count'];
+            $totalNonVacant += $count;
+            
+            $bedsConditions[] = [
+                'title' => xl($data['title']),
+                'icon' => $data['icon'],
+                'color' => $data['color'],
+                'count' => $count
+            ];
+        }
+
+        // Calcular Vacantes de forma dinámica (Total Físico - Otros Estados)
+        if ($vacantData) {
+            $vacantCount = max(0, $totalBeds - $totalNonVacant);
+            // Insertar vacantes al principio o según su seq (re-ordenar al final si es necesario)
+            array_unshift($bedsConditions, [
+                'title' => xl($vacantData['title']),
+                'icon' => $vacantData['icon'],
+                'color' => $vacantData['color'],
+                'count' => $vacantCount
+            ]);
         }
 
         $facilities[] = [
@@ -163,14 +194,19 @@ function getUnitsWithBedsData($facilityId) {
     $unitsResult = sqlStatement($unitsQuery, [$facilityId]);
     $units = [];
 
-    // Obtener las condiciones de las camas y sus iconos y colores
-    $bedConditionsQuery = "SELECT lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition'";
+    // Obtener las condiciones de las camas y sus iconos y colores (Excluyendo Archival)
+    $bedConditionsQuery = "SELECT lo.option_id, lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition' AND lo.option_id <> 'archival' ORDER BY lo.seq ASC";
     $conditionsResult = sqlStatement($bedConditionsQuery);
     $conditions = [];
     while ($row = sqlFetchArray($conditionsResult)) {
         // Separar icono y color usando el carácter | (pipe)
         list($icon, $color) = explode('|', $row['notes']);
-        $conditions[$row['title']] = ['icon' => $icon, 'color' => $color];
+        $conditions[] = [
+            'option_id' => $row['option_id'],
+            'title' => $row['title'],
+            'icon' => $icon,
+            'color' => $color
+        ];
     }
 
     while ($unit = sqlFetchArray($unitsResult)) {
@@ -181,18 +217,41 @@ function getUnitsWithBedsData($facilityId) {
 
         // Contar las camas por condición
         $bedsConditions = [];
-        foreach ($conditions as $title => $data) {
-            $conditionQuery = "SELECT COUNT(*) AS count FROM beds_patients WHERE facility_id = ? AND unit_id = ? AND `condition` = ? AND active = 1";
-            $conditionResult = sqlStatement($conditionQuery, [$facilityId, $unit['id'], $title]);
-            $count = sqlFetchArray($conditionResult)['count'];
-            if ($count > 0) {
-                $bedsConditions[] = [
-                    'title' => xl($title),
-                    'icon' => $data['icon'],
-                    'color' => $data['color'],
-                    'count' => $count
-                ];
+        $totalNonVacant = 0;
+        $vacantData = null;
+
+        foreach ($conditions as $data) {
+            if ($data['option_id'] === 'vacant') {
+                $vacantData = $data;
+                continue;
             }
+
+            // Contar validando la ubicación real de la cama en 'beds'
+            $conditionQuery = "SELECT COUNT(*) AS count 
+                               FROM beds_patients AS bp 
+                               INNER JOIN beds AS b ON bp.bed_id = b.id 
+                               WHERE b.facility_id = ? AND b.unit_id = ? AND (bp.`condition` = ? OR bp.`condition` = ?) AND bp.active = 1 AND b.active = 1";
+            $conditionResult = sqlStatement($conditionQuery, [$facilityId, $unit['id'], $data['option_id'], $data['title']]);
+            $count = (int)sqlFetchArray($conditionResult)['count'];
+            $totalNonVacant += $count;
+
+            $bedsConditions[] = [
+                'title' => xl($data['title']),
+                'icon' => $data['icon'],
+                'color' => $data['color'],
+                'count' => $count
+            ];
+        }
+
+        // Calcular Vacantes dinámicamente
+        if ($vacantData) {
+            $vacantCount = max(0, $totalBeds - $totalNonVacant);
+            array_unshift($bedsConditions, [
+                'title' => xl($vacantData['title']),
+                'icon' => $vacantData['icon'],
+                'color' => $vacantData['color'],
+                'count' => $vacantCount
+            ]);
         }
 
         $units[] = [
@@ -218,14 +277,19 @@ function getRoomsWithBedsData($unitId, $facilityId) {
     $roomsResult = sqlStatement($roomsQuery, [$unitId]);
     $rooms = [];
 
-    // Obtener las condiciones de las camas, iconos y colores
-    $bedConditionsQuery = "SELECT lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition'";
+    // Obtener las condiciones de las camas, iconos y colores (Excluyendo Archival)
+    $bedConditionsQuery = "SELECT lo.option_id, lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition' AND lo.option_id <> 'archival' ORDER BY lo.seq ASC";
     $conditionsResult = sqlStatement($bedConditionsQuery);
     $conditions = [];
     while ($row = sqlFetchArray($conditionsResult)) {
         // Separar icono y color usando el carácter | (pipe)
         list($icon, $color) = explode('|', $row['notes']);
-        $conditions[$row['title']] = ['icon' => $icon, 'color' => $color];
+        $conditions[] = [
+            'option_id' => $row['option_id'],
+            'title' => $row['title'],
+            'icon' => $icon,
+            'color' => $color
+        ];
     }
 
     // Iterar sobre cada cuarto para contar sus camas
@@ -237,18 +301,41 @@ function getRoomsWithBedsData($unitId, $facilityId) {
 
         // Contar las camas por condición
         $bedsConditions = [];
-        foreach ($conditions as $title => $data) {
-            $conditionQuery = "SELECT COUNT(*) AS count FROM beds_patients WHERE facility_id = ? AND room_id = ? AND `condition` = ? AND active = 1";
-            $conditionResult = sqlStatement($conditionQuery, [$facilityId, $room['id'], $title]);
-            $count = sqlFetchArray($conditionResult)['count'];
-            if ($count > 0) {
-                $bedsConditions[] = [
-                    'title' => xl($title),
-                    'icon' => $data['icon'],
-                    'color' => $data['color'],
-                    'count' => $count
-                ];
+        $totalNonVacant = 0;
+        $vacantData = null;
+
+        foreach ($conditions as $data) {
+            if ($data['option_id'] === 'vacant') {
+                $vacantData = $data;
+                continue;
             }
+
+            // Contar validando la ubicación real de la cama en 'beds'
+            $conditionQuery = "SELECT COUNT(*) AS count 
+                               FROM beds_patients AS bp 
+                               INNER JOIN beds AS b ON bp.bed_id = b.id 
+                               WHERE b.facility_id = ? AND b.room_id = ? AND (bp.`condition` = ? OR bp.`condition` = ?) AND bp.active = 1 AND b.active = 1";
+            $conditionResult = sqlStatement($conditionQuery, [$facilityId, $room['id'], $data['option_id'], $data['title']]);
+            $count = (int)sqlFetchArray($conditionResult)['count'];
+            $totalNonVacant += $count;
+            
+            $bedsConditions[] = [
+                'title' => xl($data['title']),
+                'icon' => $data['icon'],
+                'color' => $data['color'],
+                'count' => $count
+            ];
+        }
+
+        // Calcular Vacantes dinámicamente
+        if ($vacantData) {
+            $vacantCount = max(0, $totalBeds - $totalNonVacant);
+            array_unshift($bedsConditions, [
+                'title' => xl($vacantData['title']),
+                'icon' => $vacantData['icon'],
+                'color' => $vacantData['color'],
+                'count' => $vacantCount
+            ]);
         }
 
         // Añadir el cuarto y sus datos a la lista
@@ -293,53 +380,92 @@ function getBedsPatientsData($roomId) {
         ];
     }
 
-    // Consulta para obtener los datos de las camas del cuarto seleccionado que están ocupadas
+    // Consulta para obtener los datos físicos de las camas y su estado actual (si existe)
     $bedsQuery = "
-        SELECT bp.*, 
+        SELECT b.id AS bed_id,
+               b.bed_name AS main_bed_name,
+               b.bed_type AS main_bed_type,
+               b.room_id,
+               b.unit_id,
+               b.facility_id,
+               b.obs AS bed_notes,
+               bp.id AS bp_id,
+               bp.patient_id,
+               bp.responsible_user_id,
+               bp.assigned_date,
+               bp.change_date,
+               bp.`condition`,
+               bp.patient_care,
+               bp.inpatient_physical_restrictions,
+               bp.inpatient_sensory_restrictions,
+               bp.inpatient_cognitive_restrictions,
+               bp.inpatient_behavioral_restrictions,
+               bp.inpatient_dietary_restrictions,
+               bp.inpatient_other_restrictions,
+               bp.notes as bp_notes,
+               bp.operation,
+               bp.user_modif,
+               bp.datetime_modif,
                lo_type.title AS bed_type_title, 
                lo_status.title AS bed_status_title, 
                lo_cond.title AS condition_title,
                lo_cond.notes AS condition_notes
-        FROM beds_patients AS bp
-        LEFT JOIN list_options AS lo_type ON bp.bed_type = lo_type.option_id AND lo_type.list_id = 'beds_type'
-        LEFT JOIN list_options AS lo_status ON bp.bed_status = lo_status.option_id AND lo_status.list_id = 'beds_status'
-        LEFT JOIN list_options AS lo_cond ON bp.condition = lo_cond.option_id AND lo_cond.list_id = 'bed_condition'
-        WHERE bp.room_id = ? AND bp.active = 1";
+        FROM beds AS b
+        LEFT JOIN beds_patients AS bp ON b.id = bp.bed_id AND bp.active = 1
+        LEFT JOIN list_options AS lo_type ON b.bed_type = lo_type.option_id AND lo_type.list_id = 'beds_type'
+        LEFT JOIN list_options AS lo_status ON b.bed_status = lo_status.option_id AND lo_status.list_id = 'beds_status'
+        LEFT JOIN list_options AS lo_cond ON (bp.condition = lo_cond.option_id OR bp.condition = lo_cond.title) AND lo_cond.list_id = 'bed_condition'
+        WHERE b.room_id = ? AND b.active = 1 AND b.operation <> 'Delete'";
     
     $bedsResult = sqlStatement($bedsQuery, [$roomId]);
     $bedPatients = [];
 
     while ($row = sqlFetchArray($bedsResult)) {
         $conditionsList = [];
-        // Usar el valor crudo del campo 'condition' para la lógica (ej: 'Occupied', 'Vacant')
-        $conditionID = $row['condition'];
+        // Si no hay registro en beds_patients, asumimos vacant por defecto
+        $conditionID = $row['condition'] ?? 'vacant';
         
         $icon = "";
         $color = "#000000";
+        $currentConditionTitle = $row['condition_title'];
+        
         if (!empty($row['condition_notes'])) {
             list($icon, $color) = explode('|', $row['condition_notes']);
             $icon = "../images/" . $icon;
+        } else {
+            // Cargar datos por defecto para Vacant si no hay join exitoso
+            $defaultVacant = $conditions['vacant'] ?? ($conditions['Vacant'] ?? null);
+            if ($defaultVacant) {
+                $icon = $defaultVacant['icon'];
+                $color = $defaultVacant['color'];
+                if (empty($currentConditionTitle)) {
+                    $currentConditionTitle = $defaultVacant['title'];
+                }
+            }
         }
         
-        // Siempre agregamos la condición actual a la lista para que load_beds.php la detecte
+        // Si llegamos aquí y sigue vacío, fallback final
+        if (empty($currentConditionTitle)) {
+            $currentConditionTitle = ucfirst($conditionID);
+        }
+
+        // Siempre agregamos la condición actual a la lista
         $conditionsList[] = [
-            'title' => $conditionID, 
+            'title' => $currentConditionTitle, 
             'icon' => $icon,
             'color' => $color
         ];
 
-        // Verificar si la cama está ocupada para cargar datos del paciente
-        $isOccupied = ($conditionID === 'Occupied');
+        // Verificar si la cama está ocupada (buscando por ID o Título)
+        $isOccupied = ($conditionID === 'occupied' || $conditionID === 'Occupied' || ($row['condition_title'] ?? '') === 'Occupied');
 
         $bedStatus = [
             'text' => $row['bed_status_title'] ?? $row['bed_status'] ?? 'Unknown',
             'color' => '#000000'
         ];
 
-        // Obtener fechas y horas de asignación e internación
-        // Para cargar se debe usar la funcion oeTimestampFormatDateTime() con strtotime()
-        // Ejemplo: value="<?= oeTimestampFormatDateTime(strtotime($bedPatient['datetime_modif']))
-        $assignedDateFormat = new DateTime($row['assigned_date']);
+        // Obtener fecha de asignación (o actual si está vacante pero por algún motivo llega aquí)
+        $assignedDateFormat = new DateTime($row['assigned_date'] ?? date('Y-m-d H:i:s'));
 
 
         // Manejar fecha de alta: si no existe, se usa la fecha actual
@@ -396,10 +522,11 @@ function getBedsPatientsData($roomId) {
 
         // Añadir la cama a la lista
         $bedPatients[] = [
-            'id' => $row['id'],
+            'id' => $row['bed_id'],
+            'bp_id' => $row['bp_id'],
             'bed_id' => $row['bed_id'],
-            'bed_name' => $row['bed_name'],
-            'bed_type' => $row['bed_type_title'] ?? xl('Unknown'),
+            'bed_name' => $row['main_bed_name'] ?? $row['bed_name'],
+            'bed_type' => $row['bed_type_title'] ?? $row['main_bed_type'] ?? xl('Unknown'),
             'bed_notes' => $row['notes'],
             'room_id' => $row['room_id'],
             'unit_id' => $row['unit_id'],

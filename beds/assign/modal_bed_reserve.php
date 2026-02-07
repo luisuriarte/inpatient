@@ -28,7 +28,7 @@
                     <!-- Campo oculto para el ID del paciente (puedes obtenerlo de la sesión o pasarlo aquí si es necesario) -->
                     <input type="hidden" name="patient_id" value="<?= $patient_id ?>" />
                      <!-- Campo oculto para el ID de la tabla beds_patients  -->
-                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['id']; ?>">
+                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['bp_id']; ?>">
                     <input type="hidden" name="room_id" value="<?= $roomId; ?>">
                     <input type="hidden" name="room_name" value="<?= $roomName; ?>">
                     <input type="hidden" name="unit_id" value="<?= $unitId; ?>">
@@ -66,7 +66,8 @@
         setupAutocomplete(
             'autocompleteReserve<?= $bedPatient['id'] ?>', 
             'reserveModal<?= $bedPatient['id'] ?>', 
-            'responsibleReserve<?= $bedPatient['id'] ?>'
+            'responsibleReserve<?= $bedPatient['id'] ?>',
+            '../../search_users.php'
         );
     });
 </script>

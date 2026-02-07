@@ -3,10 +3,12 @@
     flex-wrap: wrap;
     gap: 20px;
 }
+
 .centro-icon {
     text-align: center;
     cursor: pointer;
 }
+
 .centro-icon img {
     width: 100px;
     height: 100px;
@@ -18,7 +20,7 @@
     font-weight: bold;
     color: #333;
     margin-top: 8px;
-	font-family: 'Arial', sans-serif;
+    font-family: 'Arial', sans-serif;
 }
 
 /* Estilo para las leyendas de desactivado */
@@ -26,11 +28,13 @@
     font-size: 14px;
     color: #888;
 }
+
 /* Estilo para las leyendas de desactivado */
 .centro-active {
     font-size: 14px;
     color: #888;
 }
+
 .unit-container {
     display: flex;
     flex-direction: column;
@@ -46,11 +50,13 @@
     border-radius: 5px;
     background-color: #f9f9f9;
 }
+
 /* Icono de Unidades */
 .unit-icon {
     width: 50px;
     height: 50px;
 }
+
 .unit-icon img {
     width: 50px;
     height: 50px;
@@ -83,11 +89,13 @@
     border-radius: 5px;
     background-color: #f9f9f9;
 }
+
 /* Icono de Unidades */
 .room-icon {
     width: 50px;
     height: 50px;
 }
+
 .room-icon img {
     width: 50px;
     height: 50px;
@@ -104,9 +112,8 @@
     font-size: 14px;
     color: #888;
 }
-::-webkit-meter-even-less-good-value
 
-.bed-container {
+::-webkit-meter-even-less-good-value .bed-container {
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -121,12 +128,14 @@
     border-radius: 5px;
     background-color: #f9f9f9;
 }
+
 /* Icono de Camas */
 .bed-icon {
     width: 50px;
     height: 50px;
     cursor: pointer;
 }
+
 .bed-icon img {
     width: 50px;
     height: 50px;
@@ -143,10 +152,12 @@
     font-size: 14px;
     color: #888;
 }
+
 /* Filas de las Camas */
 .bed-row:nth-child(even) {
     background-color: #f7f7f7;
 }
+
 .bed-row:nth-child(odd) {
     background-color: #ffffff;
 }
@@ -163,20 +174,22 @@
 
 /* Estilos para la ventana emergente */
 .warning-popup {
-position: fixed;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-background-color: #ffcc00;
-padding: 20px;
-border-radius: 10px;
-box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-z-index: 1000;
-text-align: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffcc00;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    text-align: center;
 }
+
 .warning-popup p {
     margin: 0 0 15px;
 }
+
 .warning-popup button {
     background-color: orange;
     border: none;
@@ -186,6 +199,7 @@ text-align: center;
     border-radius: 5px;
     cursor: pointer;
 }
+
 .warning-popup button:hover {
     background-color: #e69500;
 }
@@ -197,11 +211,13 @@ text-align: center;
     width: 40px;
     height: 20px;
 }
+
 .custom-checkbox input {
     opacity: 0;
     width: 0;
     height: 0;
 }
+
 .slider {
     position: absolute;
     cursor: pointer;
@@ -213,6 +229,7 @@ text-align: center;
     transition: .4s;
     border-radius: 20px;
 }
+
 .slider:before {
     position: absolute;
     content: "";
@@ -224,12 +241,15 @@ text-align: center;
     transition: .4s;
     border-radius: 50%;
 }
-input:checked + .slider {
+
+input:checked+.slider {
     background-color: #28a745;
 }
-input:checked + .slider:before {
+
+input:checked+.slider:before {
     transform: translateX(20px);
 }
+
 .modal-header {
     background-color: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
@@ -248,6 +268,7 @@ body {
     background-color: #fdfdfd;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
 .icon-container {
     display: flex;
     justify-content: center;
@@ -255,6 +276,7 @@ body {
     flex-wrap: wrap;
     margin-top: 20px;
 }
+
 .btn-custom {
     border-radius: 12px;
     padding: 15px;
@@ -263,23 +285,28 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 }
+
 .btn-custom:hover {
     transform: scale(1.05);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
+
 .patient-info {
     text-align: center;
     margin-bottom: 20px;
     color: #333;
 }
+
 .btn-primary-custom {
     background-color: #007bff;
     color: #fff;
 }
+
 .btn-secondary-custom {
     background-color: #28a745;
     color: #fff;
 }
+
 .btn-danger-custom {
     background-color: #dc3545;
     color: #fff;
@@ -303,33 +330,43 @@ body {
     align-items: center;
     gap: 15px;
 }
+
 .patient-icon {
     font-size: 28px;
     color: #007bff;
 }
+
 .patient-text {
     font-size: 18px;
     font-weight: 500;
     color: #333;
 }
+
 .patient-header {
     text-align: center;
     flex-basis: 100%;
     margin-bottom: 15px;
 }
+
 .patient-name {
     font-size: 22px;
     font-weight: bold;
     color: #007bff;
 }
 
-.facility-card, .unit-card, .room-card {
+.facility-card,
+.unit-card,
+.room-card {
     cursor: pointer;
     transition: transform 0.2s;
 }
-.facility-card:hover, .unit-card:hover, .room-card:hover {
+
+.facility-card:hover,
+.unit-card:hover,
+.room-card:hover {
     transform: scale(1.05);
 }
+
 .card-title {
     font-weight: bold;
     display: flex;
@@ -337,28 +374,35 @@ body {
     justify-content: center;
     gap: 8px;
 }
+
 .facility-card .card-title {
     flex: 1;
-    text-align: left; /* Alinear el título a la izquierda */
+    text-align: left;
+    /* Alinear el título a la izquierda */
 }
 
 .count-left {
-    text-align: left; /* Alinear el conteo a la izquierda */
+    text-align: left;
+    /* Alinear el conteo a la izquierda */
     position: relative;
-    left: 50%; /* Mover el conteo hacia la mitad de la tarjeta */
-    transform: translateX(-50%); /* Centrar el inicio del conteo desde la mitad */
+    left: 50%;
+    /* Mover el conteo hacia la mitad de la tarjeta */
+    transform: translateX(-50%);
+    /* Centrar el inicio del conteo desde la mitad */
 }
 
 /* Estilo para el contenedor del switch */
 .custom-slider-switch {
     display: flex;
     align-items: center;
-    gap: 10px; /* Espacio entre el slider y el texto */
+    gap: 10px;
+    /* Espacio entre el slider y el texto */
 }
 
 /* Estilo base para el switch */
 .custom-slider-switch input[type="checkbox"] {
-    appearance: none; /* Oculta el checkbox original */
+    appearance: none;
+    /* Oculta el checkbox original */
     width: 50px;
     height: 25px;
     background-color: #ccc;
@@ -371,7 +415,8 @@ body {
 
 /* Estilo para el estado marcado (checked) */
 .custom-slider-switch input[type="checkbox"]:checked {
-    background-color: #66bb6a; /* Color del slider cuando está activo */
+    background-color: #66bb6a;
+    /* Color del slider cuando está activo */
 }
 
 /* Círculo dentro del switch */
@@ -390,12 +435,14 @@ body {
 
 /* Posición del círculo cuando está marcado */
 .custom-slider-switch input[type="checkbox"]:checked::before {
-    transform: translate(24px, -50%); /* Mueve el círculo hacia la derecha */
+    transform: translate(24px, -50%);
+    /* Mueve el círculo hacia la derecha */
 }
 
 /* Estilo para el texto a la izquierda del switch */
 .custom-slider-switch label {
-    margin-bottom: 0; /* Alineación vertical del texto */
+    margin-bottom: 0;
+    /* Alineación vertical del texto */
 }
 
 /* Estilo personalizado para reducir el tamaño de los eventos Vis.js MAR*/
@@ -411,6 +458,7 @@ body {
     z-index: 1;
     overflow: hidden;
 }
+
 .vis-item.supply {
     background-color: red;
     margin-top: -15px;
@@ -420,6 +468,7 @@ body {
     background-color: green;
     margin-top: -15px;
 }
+
 .vis-item.alarm2 {
     background-color: yellow;
     margin-top: -15px;
@@ -428,6 +477,7 @@ body {
 .vis-labelset {
     background-color: lightcyan;
 }
+
 .vis-item.vis-dot.alarm1.vis-readonly {
     width: 2px;
     height: 10px;
@@ -435,6 +485,7 @@ body {
     border: 0px;
     margin-top: 0px;
 }
+
 .vis-item.vis-dot.alarm2.vis-readonly {
     width: 2px;
     height: 10px;
@@ -442,146 +493,197 @@ body {
     border: 0px;
     margin-top: 0px;
 }
+
 .vis-item.vis-dot.supply.vis-readonly {
     width: 2px;
-    height:10px;
+    height: 10px;
     background-color: red;
     border: 0px;
     margin-top: 0px;
 }
 
-:root {
-    --background-color: <?php echo $backgroundPatientCard; ?>;
-}
+
 
 .bed-card {
     font-size: 0.8rem;
 }
+
 .bed-card .card-title {
     font-size: 1.2rem;
 }
+
 .bed-card .card-text {
     font-size: 0.9rem;
 }
+
 .btn {
     font-size: 0.8rem;
 }
+
 .conditions img {
     width: 100px;
     height: 100px;
     margin-right: 5px;
 }
+
 /* Estilo para el contenedor de cuidado del paciente */
 .patient-care {
     display: flex;
-    flex-direction: column; /* Asegura que los elementos dentro de .patient-care se apilen verticalmente */
-    align-items: center; /* Centra los elementos */
+    flex-direction: column;
+    /* Asegura que los elementos dentro de .patient-care se apilen verticalmente */
+    align-items: center;
+    /* Centra los elementos */
 }
 
 /* Estilo para el icono de cuidado del paciente */
 .care-icon {
-    width: 100px; /* Ajusta el tamaño según sea necesario */
+    width: 100px;
+    /* Ajusta el tamaño según sea necesario */
     height: auto;
-    margin-bottom: 5px; /* Espacio entre el icono y el texto */
+    margin-bottom: 5px;
+    /* Espacio entre el icono y el texto */
 }
 
 /* Estilo para el título del cuidado del paciente */
 .patient-care span {
     font-weight: bold;
 }
+
 .text-center {
-    text-align: center; /* Asegura la alineación central de contenido dentro del contenedor */
+    text-align: center;
+    /* Asegura la alineación central de contenido dentro del contenedor */
 }
+
 /* Clase para reducir el interlineado en la tarjeta */
 .compact-card .card-text,
 .compact-card .card-title {
-    line-height: 1.1; /* Reduce el espacio entre líneas */
-    margin-bottom: 4px; /* Ajusta el margen inferior de los párrafos si es necesario */
+    line-height: 1.1;
+    /* Reduce el espacio entre líneas */
+    margin-bottom: 4px;
+    /* Ajusta el margen inferior de los párrafos si es necesario */
 }
 
 .compact-card .card-title {
-    margin-bottom: 6px; /* Ajuste específico para el título */
-    font-size: 1.1rem; /* Ajuste opcional del tamaño de fuente */
+    margin-bottom: 6px;
+    /* Ajuste específico para el título */
+    font-size: 1.1rem;
+    /* Ajuste opcional del tamaño de fuente */
 }
+
 /* Clase para reducir interlineado y márgenes */
 .minimal-spacing {
     line-height: 1.1;
     margin-bottom: 2px;
 }
+
 /* Clase para reducir los espacios entre las tarjetas */
 .compact-card {
-    margin-bottom: 8px; /* Ajusta el margen inferior entre tarjetas */
+    margin-bottom: 8px;
+    /* Ajusta el margen inferior entre tarjetas */
 }
 
 /* Ajusta los paddings internos de la tarjeta */
 .compact-card .card-body {
-    padding: 8px; /* Ajusta el padding interno de las tarjetas */
+    padding: 8px;
+    /* Ajusta el padding interno de las tarjetas */
 }
 
 /* Reduce los márgenes entre títulos y el contenido */
 .compact-card .card-title {
-    margin-bottom: 4px; /* Ajusta el margen inferior de los títulos de tarjeta */
+    margin-bottom: 4px;
+    /* Ajusta el margen inferior de los títulos de tarjeta */
 }
 
 /* Ajusta el espaciado de los párrafos dentro de las tarjetas */
 .card-text {
-    margin-bottom: 2px; /* Ajusta el margen inferior de los párrafos */
-    line-height: 1.2; /* Ajusta el espaciado entre líneas del texto */
+    margin-bottom: 2px;
+    /* Ajusta el margen inferior de los párrafos */
+    line-height: 1.2;
+    /* Ajusta el espaciado entre líneas del texto */
 }
 
 /* Ajuste para hacer más cortos los dropdowns */
 .form-select {
-    max-width: 90%; /* Reducir el tamaño del dropdown */
+    max-width: 90%;
+    /* Reducir el tamaño del dropdown */
 }
+
 /* Estilo de dropdowns */
 #facility_id {
-    background-color: #ffcccc; /* Rojo suave de fondo */
-    height: 35px; /* Ajustar la altura */
-    font-size: 14px; /* Tamaño de fuente */
-    width: 200px; /* Ancho fijo para cada dropdown */
-    text-align: center; /* Centrar texto dentro del dropdown */
-} 
+    background-color: #ffcccc;
+    /* Rojo suave de fondo */
+    height: 35px;
+    /* Ajustar la altura */
+    font-size: 14px;
+    /* Tamaño de fuente */
+    width: 200px;
+    /* Ancho fijo para cada dropdown */
+    text-align: center;
+    /* Centrar texto dentro del dropdown */
+}
+
 #floor_id {
-    background-color: #feffcc; /* Verde suave de fondo */
-    height: 35px; /* Ajustar la altura */
-    font-size: 14px; /* Tamaño de fuente */
-    width: 200px; /* Ancho fijo para cada dropdown */
-    text-align: center; /* Centrar texto dentro del dropdown */
+    background-color: #feffcc;
+    /* Verde suave de fondo */
+    height: 35px;
+    /* Ajustar la altura */
+    font-size: 14px;
+    /* Tamaño de fuente */
+    width: 200px;
+    /* Ancho fijo para cada dropdown */
+    text-align: center;
+    /* Centrar texto dentro del dropdown */
 }
 
 #unit_id {
-    background-color: #ccffcc; /* Verde suave de fondo */
-    height: 35px; /* Ajustar la altura */
-    font-size: 14px; /* Tamaño de fuente */
-    width: 200px; /* Ancho fijo para cada dropdown */
-    text-align: center; /* Centrar texto dentro del dropdown */
+    background-color: #ccffcc;
+    /* Verde suave de fondo */
+    height: 35px;
+    /* Ajustar la altura */
+    font-size: 14px;
+    /* Tamaño de fuente */
+    width: 200px;
+    /* Ancho fijo para cada dropdown */
+    text-align: center;
+    /* Centrar texto dentro del dropdown */
 }
 
 #room_id {
-    background-color: #cce5ff; /* Azul suave de fondo */
-    height: 35px; /* Ajustar la altura */
-    font-size: 14px; /* Tamaño de fuente */
-    width: 200px; /* Ancho fijo para cada dropdown */
-    text-align: center; /* Centrar texto dentro del dropdown */
+    background-color: #cce5ff;
+    /* Azul suave de fondo */
+    height: 35px;
+    /* Ajustar la altura */
+    font-size: 14px;
+    /* Tamaño de fuente */
+    width: 200px;
+    /* Ancho fijo para cada dropdown */
+    text-align: center;
+    /* Centrar texto dentro del dropdown */
 }
 
 /* Alineación de los elementos en el formulario */
 .form-row {
     display: flex;
-    justify-content: space-between; /* Coloca los dropdowns más cerca */
-    gap: 10px; /* Espacio entre los dropdowns */
+    justify-content: space-between;
+    /* Coloca los dropdowns más cerca */
+    gap: 10px;
+    /* Espacio entre los dropdowns */
 }
 
 /* Ajuste para los labels */
 .form-label {
-    display: block; /* Hace que el label ocupe una línea completa */
-    text-align: center; /* Centrar el texto del label */
-    margin-bottom: 5px; /* Espacio debajo de los labels */
+    display: block;
+    /* Hace que el label ocupe una línea completa */
+    text-align: center;
+    /* Centrar el texto del label */
+    margin-bottom: 5px;
+    /* Espacio debajo de los labels */
 }
 
 /* Ajuste para los select para que estén centrados dentro del div */
 .form-select {
-    margin: 0 auto; /* Centrar el dropdown dentro del contenedor */
+    margin: 0 auto;
+    /* Centrar el dropdown dentro del contenedor */
 }
 
 .blinking {
@@ -589,9 +691,17 @@ body {
 }
 
 @keyframes blinkingEffect {
-    0% { background-color: red; }
-    50% { background-color: transparent; }
-    100% { background-color: red; }
+    0% {
+        background-color: red;
+    }
+
+    50% {
+        background-color: transparent;
+    }
+
+    100% {
+        background-color: red;
+    }
 }
 
 /* Custom styles for icons */
@@ -600,31 +710,105 @@ body {
     margin-right: 8px;
     font-weight: bold;
 }
+
 /* Google Material Symbols and Icons */
-.icon-oxygen { color: #1e88e5; } /* icon: air, field: oxygen  */
-.icon-plumbing { color: #6d4c41; } /* icon: plumbing, field: suction  */
-.icon-monitor { color: #d81b60; } /* icon: monitor_heart, field: cardiac_monitor  */
-.icon-fan { color: #43a047; } /* icon: , field: ventilator  */
-.icon-medication { color: #8e24aa; } /* icon: medication, field: infusion_pump  */
-.icon-flash { color: #ffb300; } /* icon: flash_on, field: defibrillator  */
-.icon-fitness { color: #f4511e; } /* icon: fitness_center, field: physiotherapy  */
-.icon-crib { color: #039be5; } /* icon: crib, field: crib_heater  */
-.icon-sync { color: #00acc1; } /* icon: sync_alt, field: air_purifier  */
-.icon-wifi { color: #00acc1; } /* icon: wifi, field: wifi  */
-.icon-tv { color: #bd28b5; } /* icon: tv, field: television  */
-.icon-play { color: #e53935; } /* icon: play_circle, field: entertainment_system  */
-.icon-menu { color: #8e24aa; } /* icon: restaurant_menu, field: personalized_menu  */
-.icon-chair { color: #43a047; } /* icon: chair, field: companion_space  */
-.icon-bathroom { color: #1e88e5; } /* icon: bathroom, field: private_bathroom  */
-.icon-smile { color: #fdd835; } /* icon: sentiment_very_satisfied, field: friendly_decor */
-.icon-light { color: #ffb300; } /* icon: light_mode, field: light_mode */
-.icon-thermostat { color: #f4511e; } /* icon: thermostat, field: thermostat  */
+.icon-oxygen {
+    color: #1e88e5;
+}
+
+/* icon: air, field: oxygen  */
+.icon-plumbing {
+    color: #6d4c41;
+}
+
+/* icon: plumbing, field: suction  */
+.icon-monitor {
+    color: #d81b60;
+}
+
+/* icon: monitor_heart, field: cardiac_monitor  */
+.icon-fan {
+    color: #43a047;
+}
+
+/* icon: , field: ventilator  */
+.icon-medication {
+    color: #8e24aa;
+}
+
+/* icon: medication, field: infusion_pump  */
+.icon-flash {
+    color: #ffb300;
+}
+
+/* icon: flash_on, field: defibrillator  */
+.icon-fitness {
+    color: #f4511e;
+}
+
+/* icon: fitness_center, field: physiotherapy  */
+.icon-crib {
+    color: #039be5;
+}
+
+/* icon: crib, field: crib_heater  */
+.icon-sync {
+    color: #00acc1;
+}
+
+/* icon: sync_alt, field: air_purifier  */
+.icon-wifi {
+    color: #00acc1;
+}
+
+/* icon: wifi, field: wifi  */
+.icon-tv {
+    color: #bd28b5;
+}
+
+/* icon: tv, field: television  */
+.icon-play {
+    color: #e53935;
+}
+
+/* icon: play_circle, field: entertainment_system  */
+.icon-menu {
+    color: #8e24aa;
+}
+
+/* icon: restaurant_menu, field: personalized_menu  */
+.icon-chair {
+    color: #43a047;
+}
+
+/* icon: chair, field: companion_space  */
+.icon-bathroom {
+    color: #1e88e5;
+}
+
+/* icon: bathroom, field: private_bathroom  */
+.icon-smile {
+    color: #fdd835;
+}
+
+/* icon: sentiment_very_satisfied, field: friendly_decor */
+.icon-light {
+    color: #ffb300;
+}
+
+/* icon: light_mode, field: light_mode */
+.icon-thermostat {
+    color: #f4511e;
+}
+
+/* icon: thermostat, field: thermostat  */
 
 /* Estilos del banner */
 .bed-banner {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Centra el contenido */
+    align-items: center;
+    /* Centra el contenido */
     background-color: #f8f9fa;
     padding: 15px;
     margin-bottom: 20px;
@@ -635,8 +819,10 @@ body {
 /* Información de la habitación en fila */
 .bed-banner-info {
     display: flex;
-    justify-content: center; /* Centra los elementos */
-    gap: 20px; /* Espacio entre elementos */
+    justify-content: center;
+    /* Centra los elementos */
+    gap: 20px;
+    /* Espacio entre elementos */
     width: 100%;
     margin-bottom: 15px;
 }
@@ -647,7 +833,8 @@ body {
     align-items: center;
     font-size: 14px;
     text-align: center;
-    flex: 1; /* Distribuye equitativamente */
+    flex: 1;
+    /* Distribuye equitativamente */
 }
 
 .bed-banner-info-label {
@@ -665,11 +852,15 @@ body {
 /* Características con iconos en una sola línea */
 .bed-banner-features {
     display: flex;
-    flex-wrap: nowrap; /* Evita que los elementos se envuelvan a la siguiente línea */
-    gap: 15px; /* Espacio entre elementos */
+    flex-wrap: nowrap;
+    /* Evita que los elementos se envuelvan a la siguiente línea */
+    gap: 15px;
+    /* Espacio entre elementos */
     width: 100%;
-    overflow-x: auto; /* Permite el desplazamiento horizontal si hay muchos íconos */
-    padding-bottom: 10px; /* Espacio para el scroll */
+    overflow-x: auto;
+    /* Permite el desplazamiento horizontal si hay muchos íconos */
+    padding-bottom: 10px;
+    /* Espacio para el scroll */
 }
 
 .bed-banner-feature-item {
@@ -678,8 +869,10 @@ body {
     align-items: center;
     text-align: center;
     font-size: 14px;
-    min-width: 100px; /* Ancho mínimo para cada ícono */
-    flex-shrink: 0; /* Evita que los elementos se reduzcan */
+    min-width: 100px;
+    /* Ancho mínimo para cada ícono */
+    flex-shrink: 0;
+    /* Evita que los elementos se reduzcan */
 }
 
 .text-muted {
@@ -698,14 +891,17 @@ body {
 }
 
 .bed-banner-feature-label span {
-    display: block; /* Cada palabra en una línea */
+    display: block;
+    /* Cada palabra en una línea */
 }
 
 /* Estilos para los íconos y características */
 .cuarto-features {
     display: flex;
-    flex-wrap: wrap; /* Permite que los íconos se envuelvan en varias líneas */
-    gap: 15px; /* Espacio entre elementos */
+    flex-wrap: wrap;
+    /* Permite que los íconos se envuelvan en varias líneas */
+    gap: 15px;
+    /* Espacio entre elementos */
     margin-top: 15px;
 }
 
@@ -715,7 +911,8 @@ body {
     align-items: center;
     text-align: center;
     font-size: 14px;
-    min-width: 100px; /* Ancho mínimo para cada ícono */
+    min-width: 100px;
+    /* Ancho mínimo para cada ícono */
 }
 
 .cuarto-feature-label {
@@ -726,27 +923,39 @@ body {
 }
 
 .cuarto-feature-label span {
-    display: block; /* Cada palabra en una línea */
+    display: block;
+    /* Cada palabra en una línea */
 }
 
 /* Estilos para el texto e icono cuando la casilla NO está marcada y está deshabilitada */
-.form-check-input:not(:checked):disabled + label {
-    color: #adb5bd; /* Color grisáceo */
-    opacity: 0.65; /* Opacidad para el efecto de aclarado */
+.form-check-input:not(:checked):disabled+label {
+    color: #adb5bd;
+    /* Color grisáceo */
+    opacity: 0.65;
+    /* Opacidad para el efecto de aclarado */
     cursor: default;
 }
 
-.form-check-input:not(:checked):disabled + label i {
-    opacity: 0.65; /* Opacidad para el icono */
+.form-check-input:not(:checked):disabled+label i {
+    opacity: 0.65;
+    /* Opacidad para el icono */
 }
 
 /* Estilos para el texto e icono cuando la casilla ESTÁ marcada y está deshabilitada */
-.form-check-input:checked:disabled + label {
-    color: inherit; /* Restablece el color del texto */
-    opacity: 1; /* Restablece la opacidad del texto */
+.form-check-input:checked:disabled+label {
+    color: inherit;
+    /* Restablece el color del texto */
+    opacity: 1;
+    /* Restablece la opacidad del texto */
     cursor: default;
 }
 
-.form-check-input:checked:disabled + label i {
-    opacity: 1; /* Restablece la opacidad del icono */
+.form-check-input:checked:disabled+label i {
+    opacity: 1;
+    /* Restablece la opacidad del icono */
+}
+
+/* Asegura que el menú de autocompletado de jQuery UI aparezca sobre los modales de Bootstrap */
+.ui-autocomplete {
+    z-index: 2150 !important;
 }

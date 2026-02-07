@@ -9,7 +9,7 @@ $dischargeDisposition = sqlStatement("SELECT title FROM list_options WHERE list_
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="dischargeForm<?= $bedPatient['id'] ?>" action="save_patient_discharge.php" method="POST">
-                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['id']; ?>">
+                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['bp_id']; ?>">
                     <!-- Campo oculto para el ID del paciente -->
                     <input type="hidden" name="patient_id" value="<?= $patient_id ?>" />
                     <!-- Campo oculto para el ID y datos de la cama -->
@@ -101,7 +101,8 @@ $dischargeDisposition = sqlStatement("SELECT title FROM list_options WHERE list_
         setupAutocomplete(
             'autocompleteDischarge<?= $bedPatient['id'] ?>', 
             'modalDischargePatient<?= $bedPatient['id'] ?>', 
-            'responsibleDischarge<?= $bedPatient['id'] ?>'
+            'responsibleDischarge<?= $bedPatient['id'] ?>',
+            '../../search_users.php'
         );
     });
 </script>

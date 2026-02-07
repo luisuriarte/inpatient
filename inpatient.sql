@@ -221,6 +221,7 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'occupied', 'Occupied', 3, 0, 0, '', 'bed_occupied_icon.svg|#C70039', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'reserved', 'Reserved', 4, 0, 0, '', 'bed_reserved_icon.svg|#8c9333', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'vacant', 'Vacant', 1, 1, 0, '', 'bed_vacant_icon.svg|#2b8c25', '');
+INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'archival', 'Archival', 5, 0, 0, '', 'bed_inactive_icon.svg|#999999', '');
 
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('Beds_Status', 'defective', 'Defective', 3, 0, 0, '', '#0c34ea', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('Beds_Status', 'in_repair', 'In Repair', 2, 0, 0, '', '#C70039', '');

@@ -3,7 +3,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="releaseForm<?= $bedPatient['id'] ?>" action="save_bed_release.php" method="POST">
-                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['id']; ?>">
+                    <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['bp_id']; ?>">
                     <!-- Campo oculto para el ID del paciente -->
                     <input type="hidden" name="patient_id" value="<?= $patient_id ?>" />
                     <!-- Campo oculto para el ID y datos de la cama -->
@@ -79,7 +79,8 @@
         setupAutocomplete(
             'autocompleteRelease<?= $bedPatient['id'] ?>', 
             'modalBedRelease<?= $bedPatient['id'] ?>', 
-            'responsibleRelease<?= $bedPatient['id'] ?>'
+            'responsibleRelease<?= $bedPatient['id'] ?>',
+            '../../search_users.php'
         );
     });
 </script>
