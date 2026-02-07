@@ -187,6 +187,36 @@ COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
 ;
 
+CREATE TABLE `beds_patients_tracker` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `patient_id` int(11) NOT NULL,
+  `bed_id_from` int(11) DEFAULT NULL,
+  `room_id_from` int(11) DEFAULT NULL,
+  `bed_name_from` varchar(50) DEFAULT NULL,
+  `bed_status_from` varchar(100) DEFAULT NULL,
+  `bed_type_from` varchar(100) DEFAULT NULL,
+  `unit_id_from` int(11) DEFAULT NULL,
+  `facility_id_from` int(11) DEFAULT NULL,
+  `bed_id_to` int(11) DEFAULT NULL,
+  `bed_name_to` varchar(50) DEFAULT NULL,
+  `bed_status_to` varchar(100) DEFAULT NULL,
+  `bed_type_to` varchar(100) DEFAULT NULL,
+  `room_id_to` int(11) DEFAULT NULL,
+  `unit_id_to` int(11) DEFAULT NULL,
+  `facility_id_to` int(11) DEFAULT NULL,
+  `move_date` datetime NOT NULL,
+  `responsible_user_id` int(11) NOT NULL,
+  `reason` varchar(255) DEFAULT NULL COMMENT 'Reason for transfer',
+  `notes` text DEFAULT NULL,
+  `user_modif` varchar(100) DEFAULT NULL,
+  `datetime_modif` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `patient_id` (`patient_id`) USING BTREE,
+  KEY `bed_id_from` (`bed_id_from`) USING BTREE,
+  KEY `bed_id_to` (`bed_id_to`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'cleaning', 'Cleaning', 2, 0, 0, '', 'bed_cleaning_icon.svg|#0c34ea', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'occupied', 'Occupied', 3, 0, 0, '', 'bed_occupied_icon.svg|#C70039', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'reserved', 'Reserved', 4, 0, 0, '', 'bed_reserved_icon.svg|#8c9333', '');

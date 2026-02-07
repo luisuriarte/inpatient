@@ -9,7 +9,7 @@ $searchQuery = $_POST['searchQuery'] ?? '';
 $sql = "
     SELECT 
         pd.lname, pd.fname, pd.mname, pd.pubpid, pd.pid, pd.DOB,
-        bp.bed_name, r.room_name, r.sector, u.unit_name,
+        bp.bed_name, r.room_name, ls.title AS sector_title, r.sector, u.unit_name,
         lo.title AS floor_name
     FROM 
         beds_patients bp
@@ -21,16 +21,18 @@ $sql = "
         units u ON bp.unit_id = u.id
     LEFT JOIN 
         list_options lo ON u.floor = lo.option_id AND lo.list_id = 'unit_floor'
+    LEFT JOIN 
+        list_options ls ON r.sector = ls.option_id AND ls.list_id = 'room_sector'
     WHERE 
         (pd.fname LIKE ? OR pd.mname LIKE ? OR pd.lname LIKE ? OR pd.pubpid LIKE ? 
-         OR r.room_name LIKE ? OR u.unit_name LIKE ? OR r.sector LIKE ? OR lo.title LIKE ?)
+         OR r.room_name LIKE ? OR u.unit_name LIKE ? OR r.sector LIKE ? OR ls.title LIKE ? OR lo.title LIKE ?)
         AND bp.condition = 'occupied'
         AND bp.active = 1
 ";
 
 $result = sqlStatement($sql, [
     "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%",
-    "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%"
+    "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%", "%$searchQuery%"
 ]);
 
 if (sqlNumRows($result) > 0) {
@@ -41,10 +43,10 @@ if (sqlNumRows($result) > 0) {
                     <th><i class="material-icons" style="color: #007bff;">person_outline</i> ' . xlt('First Name') . '</th>
                     <th><i class="material-icons" style="color: #28a745;">badge</i> ' . xlt('Ext. ID') . '</th>
                     <th><i class="material-icons" style="color: #dc3545;">bed</i> ' . xlt('Bed') . '</th>
-                    <th><i class="material-icons" style="color: #fd7e14;">meeting_room</i> ' . xlt('Room') . '</th>
-                    <th><i class="material-icons" style="color: #17a2b8;">location_on</i> ' . xlt('Sector') . '</th>
-                    <th><i class="material-icons" style="color: #6c757d;">stairs</i> ' . xlt('Floor') . '</th>
-                    <th><i class="material-icons" style="color: #ffc107;">business</i> ' . xlt('Unit') . '</th>
+                    <th><i class="material-icons" style="color: #e65100;">meeting_room</i> ' . xlt('Room') . '</th>
+                    <th><i class="material-icons" style="color: #7b1fa2;">location_on</i> ' . xlt('Sector') . '</th>
+                    <th><i class="material-icons" style="color: #616161;">stairs</i> ' . xlt('Floor') . '</th>
+                    <th><i class="material-icons" style="color: #00897b;">business</i> ' . xlt('Unit') . '</th>
                     <th><i class="material-icons" style="color: #6f42c1;">check</i> ' . xlt('Select') . '</th>
                 </tr>
             </thead>
@@ -57,7 +59,7 @@ if (sqlNumRows($result) > 0) {
                 <td>" . text($row['pubpid']) . "</td>
                 <td>" . text($row['bed_name']) . "</td>
                 <td>" . text($row['room_name']) . "</td>
-                <td>" . text(xl($row['sector'])) . "</td>
+                <td>" . text($row['sector_title'] ?? $row['sector'] ?? xl('Unknown')) . "</td>
                 <td>" . text($row['floor_name']) . "</td>
                 <td>" . text($row['unit_name']) . "</td>
                 <td>

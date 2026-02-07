@@ -48,6 +48,7 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
     <title><?php echo xlt('List of Beds'); ?></title>
     <!-- Enlaces a CSS de Bootstrap y estilos personalizados -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../../styles.css">
 
 </head>
@@ -62,7 +63,7 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
         <?php endif; ?>
 
         <!-- Título de la página -->
-        <h1 class="mb-4"><?php echo xlt('Beds of Room') . ': ' .  htmlspecialchars($roomName); ?></h1>
+        <h1 class="mb-4"><i class="fas fa-door-open" style="color: #e65100;"></i> <?php echo xlt('Beds of Room') . ': ' .  htmlspecialchars($roomName); ?></h1>
 
         <!-- Filtro para mostrar camas inactivas -->
         <form method="get" class="mb-3">
@@ -118,9 +119,9 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo xlt('Close'); ?>"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <p><strong><?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
-                                    <p><strong><?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unitName); ?></p>
-                                    <p><strong><?php echo xlt('Room'); ?>:</strong> <?php echo htmlspecialchars($roomName); ?></p>
+                                    <p><strong><i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
+                                    <p><strong><i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unitName); ?></p>
+                                    <p><strong><i class="fas fa-door-open" style="color: #e65100;"></i> <?php echo xlt('Room'); ?>:</strong> <?php echo htmlspecialchars($roomName); ?></p>
                                     <p><strong><?php echo xlt('Bed'); ?>:</strong> <?php echo htmlspecialchars($bed['bed_name']); ?></p>
                                     <p><strong><?php echo xlt('Type'); ?>:</strong> <?php echo htmlspecialchars($bed['bed_type']); ?></p>
                                     <p><strong><?php echo xlt('Status'); ?>:</strong> <?php echo htmlspecialchars($bed['bed_status']); ?></p>

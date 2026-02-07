@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldBedData = sqlQuery($oldBedQuery, [$fromIdBedsPatients]);
 
             if ($oldBedData) {
-                // Actualizar la cama destino con la información del paciente
+                // Actualizar la cama destino con la información del paciente usando beds_patients_id (PK)
                 $updateNewBedQuery = "UPDATE beds_patients 
                                       SET patient_id = ?, assigned_date = ?, change_date = NULL,
                                           patient_care = ?, inpatient_physical_restrictions = ?, 
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                           inpatient_other_restrictions = ?, 
                                           `condition` = 'Occupied', operation = 'Relocation', 
                                           user_modif = ?, datetime_modif = ?, active = 1
-                                      WHERE bed_id = ?";
+                                      WHERE id = ?";
 
                 $updateNewBedResult = sqlStatement($updateNewBedQuery, [
                     $patientId,
@@ -72,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $oldBedData['inpatient_other_restrictions'],
                     $userFullName,
                     $now,
-                    $bedIdNew
+                    $bedsPatientsId // PK de la fila de la cama destino
                 ]);
 
                 if ($updateNewBedResult) {
-                    // Actualizar la cama de origen para vaciar los datos del paciente
+                    // Actualizar la cama de origen para vaciar los datos del paciente y ponerla en Cleaning
                     $updateOldBedQuery = "UPDATE beds_patients 
                                             SET patient_id = NULL, responsible_user_id = NULL, 
                                                 assigned_date = NULL, change_date = ?, 
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $now,   // change_date
                         $userFullName, // user_modif
                         $now,   // datetime_modif
-                        $fromIdBedsPatients // Ahora usamos el id correcto
+                        $fromIdBedsPatients // ID de la fila origen
                         ]);
 
                     if ($updateOldBedResult) {

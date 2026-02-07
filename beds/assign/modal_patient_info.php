@@ -149,10 +149,6 @@
                                     
                                     <!-- Mostrar el título del cuidado del paciente -->
                                     <p class="mb-0 fw-bold"><?= htmlspecialchars(xlt($bedPatient['bed_patient_care']['care_title'])) ?></p>
-                                <?php else: ?>
-                                    <?php echo 'Salida: ';
-                                        var_dump(getBedPatientCare($bedPatient['id'], $bedPatient['patient_id']));
-                                    ?>
                                     <!-- Mensaje si no hay cuidados registrados -->
                                     <p class="mb-0"><?php echo xlt('There are no recorded cares'); ?>.</p>
                                 <?php endif; ?>

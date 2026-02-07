@@ -11,8 +11,11 @@ if ($unit_id <= 0) {
     exit;
 }
 
-// Consulta para obtener los cuartos activos de la unidad
-$query = "SELECT * FROM rooms WHERE unit_id = ? AND active = 1 AND operation <> 'Delete'";
+// Consulta para obtener los cuartos activos de la unidad con su sector traducido
+$query = "SELECT r.*, lo.title AS sector_title 
+          FROM rooms AS r 
+          LEFT JOIN list_options AS lo ON r.sector = lo.option_id AND lo.list_id = 'room_sector'
+          WHERE r.unit_id = ? AND r.active = 1 AND r.operation <> 'Delete'";
 $result = sqlStatement($query, [$unit_id]);
 
 $rooms = [];
@@ -22,7 +25,7 @@ while ($row = sqlFetchArray($result)) {
     $rooms[] = [
         'id' => $row['id'],
         'room_name' => $row['room_name'],
-        'room_sector' => $row['room_sector'],
+        'room_sector' => $row['sector_title'] ?? $row['sector'],
         'number_of_beds' => $row['number_of_beds'],
         'obs' => $row['obs']
     ];

@@ -157,7 +157,9 @@ function getFacilitiesWithBedsData() {
 
 // Función para obtener los datos de las unidades con camas de una facility
 function getUnitsWithBedsData($facilityId) {
-    $unitsQuery = "SELECT id, unit_name FROM units WHERE facility_id = ? AND active = 1";
+    $unitsQuery = "SELECT u.id, u.unit_name, lo.title AS floor_title FROM units AS u 
+                   LEFT JOIN list_options AS lo ON u.floor = lo.option_id AND lo.list_id = 'unit_floor'
+                   WHERE u.facility_id = ? AND u.active = 1";
     $unitsResult = sqlStatement($unitsQuery, [$facilityId]);
     $units = [];
 
@@ -196,6 +198,7 @@ function getUnitsWithBedsData($facilityId) {
         $units[] = [
             'id' => $unit['id'],
             'unit_name' => $unit['unit_name'],
+            'unit_floor' => $unit['floor_title'] ?? xl('Unknown'),
             'total_beds' => $totalBeds,
             'bed_conditions' => $bedsConditions
         ];
@@ -207,7 +210,11 @@ function getUnitsWithBedsData($facilityId) {
 // Función para obtener los datos de los cuartos (rooms) con camas de una unidad
 function getRoomsWithBedsData($unitId, $facilityId) {
     // Consulta para obtener los cuartos activos dentro de la unidad especificada
-    $roomsQuery = "SELECT id, room_name FROM rooms WHERE unit_id = ? AND active = 1";
+    $roomsQuery = "SELECT r.id, r.room_name, r.sector, lo.title AS room_type_title, ls.title AS room_sector_title 
+                   FROM rooms AS r 
+                   LEFT JOIN list_options AS lo ON r.room_type = lo.option_id AND lo.list_id = 'rooms_type'
+                   LEFT JOIN list_options AS ls ON r.sector = ls.option_id AND ls.list_id = 'room_sector'
+                   WHERE r.unit_id = ? AND r.active = 1";
     $roomsResult = sqlStatement($roomsQuery, [$unitId]);
     $rooms = [];
 
@@ -248,6 +255,8 @@ function getRoomsWithBedsData($unitId, $facilityId) {
         $rooms[] = [
             'id' => $room['id'],
             'room_name' => $room['room_name'],
+            'room_sector' => $room['room_sector_title'] ?? $room['sector'],
+            'room_type' => $room['room_type_title'] ?? xl('Unknown'),
             'total_beds' => $totalBeds,
             'bed_conditions' => $bedsConditions
         ];
@@ -259,57 +268,73 @@ function getRoomsWithBedsData($unitId, $facilityId) {
 // Función para obtener los detalles de las camas
 function getBedsPatientsData($roomId) {
     // Obtener las condiciones de las camas, iconos y colores
-    $bedConditionsQuery = "SELECT lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition'";
+    $bedConditionsQuery = "SELECT lo.option_id, lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'bed_condition'";
     $conditionsResult = sqlStatement($bedConditionsQuery);
     $conditions = [];
     while ($row = sqlFetchArray($conditionsResult)) {
         list($icon, $color) = explode('|', $row['notes']);
-        $conditions[$row['title']] = ['icon' => "../images/" . $icon, 'color' => $color];
+        $conditions[$row['option_id']] = [
+            'option_id' => $row['option_id'],
+            'title' => $row['title'], // Mantener original para lógica
+            'icon' => "../images/" . $icon, 
+            'color' => $color
+        ];
     }
 
     // Obtener los estados de las camas, textos y colores
-    $bedStatusQuery = "SELECT lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'beds_status'";
+    $bedStatusQuery = "SELECT lo.option_id, lo.title, lo.notes FROM list_options AS lo WHERE lo.list_id = 'beds_status'";
     $statusResult = sqlStatement($bedStatusQuery);
     $statuses = [];
     while ($row = sqlFetchArray($statusResult)) {
-        $statuses[$row['title']] = [
-            'text' => $row['title'],
+        $statuses[$row['option_id']] = [
+            'option_id' => $row['option_id'],
+            'text' => $row['title'], // Mantener original para lógica
             'color' => $row['notes']
         ];
     }
 
     // Consulta para obtener los datos de las camas del cuarto seleccionado que están ocupadas
     $bedsQuery = "
-        SELECT bp.id, bp.bed_id, bp.room_id, bp.unit_id, bp.facility_id, bp.responsible_user_id, bp.patient_id, bp.assigned_date, bp.change_date,
-            bp.condition, bp.patient_care, bp.inpatient_physical_restrictions, bp.notes, bp.operation, bp.user_modif, 
-            bp.inpatient_sensory_restrictions, bp.inpatient_cognitive_restrictions, bp.inpatient_behavioral_restrictions,bp.datetime_modif,
-            bp.inpatient_dietary_restrictions, bp.inpatient_other_restrictions, bp.bed_name, bp.bed_status, bp.bed_type, bp.active
+        SELECT bp.*, 
+               lo_type.title AS bed_type_title, 
+               lo_status.title AS bed_status_title, 
+               lo_cond.title AS condition_title,
+               lo_cond.notes AS condition_notes
         FROM beds_patients AS bp
-        JOIN beds AS b ON bp.bed_id = b.id
+        LEFT JOIN list_options AS lo_type ON bp.bed_type = lo_type.option_id AND lo_type.list_id = 'beds_type'
+        LEFT JOIN list_options AS lo_status ON bp.bed_status = lo_status.option_id AND lo_status.list_id = 'beds_status'
+        LEFT JOIN list_options AS lo_cond ON bp.condition = lo_cond.option_id AND lo_cond.list_id = 'bed_condition'
         WHERE bp.room_id = ? AND bp.active = 1";
     
     $bedsResult = sqlStatement($bedsQuery, [$roomId]);
     $bedPatients = [];
 
     while ($row = sqlFetchArray($bedsResult)) {
-        // Obtener la condición actual de la cama desde beds_patients
-        $conditionTitle = $row['condition'];
         $conditionsList = [];
-
-        if (isset($conditions[$conditionTitle])) {
-            $conditionsList[] = [
-                'title' => $conditionTitle,
-                'icon' => $conditions[$conditionTitle]['icon'],
-                'color' => $conditions[$conditionTitle]['color']
-            ];
+        // Usar el valor crudo del campo 'condition' para la lógica (ej: 'Occupied', 'Vacant')
+        $conditionID = $row['condition'];
+        
+        $icon = "";
+        $color = "#000000";
+        if (!empty($row['condition_notes'])) {
+            list($icon, $color) = explode('|', $row['condition_notes']);
+            $icon = "../images/" . $icon;
         }
+        
+        // Siempre agregamos la condición actual a la lista para que load_beds.php la detecte
+        $conditionsList[] = [
+            'title' => $conditionID, 
+            'icon' => $icon,
+            'color' => $color
+        ];
 
-        // Verificar si la cama está ocupada
-        $isOccupied = ($conditionTitle === 'Occupied');
+        // Verificar si la cama está ocupada para cargar datos del paciente
+        $isOccupied = ($conditionID === 'Occupied');
 
-        // Obtener el estado de la cama con color desde beds_patients
-        $bedStatusTitle = $row['bed_status'];
-        $bedStatus = isset($statuses[$bedStatusTitle]) ? $statuses[$bedStatusTitle] : ['text' => xl('Unknown'), 'color' => '#000000'];
+        $bedStatus = [
+            'text' => $row['bed_status_title'] ?? $row['bed_status'] ?? 'Unknown',
+            'color' => '#000000'
+        ];
 
         // Obtener fechas y horas de asignación e internación
         // Para cargar se debe usar la funcion oeTimestampFormatDateTime() con strtotime()
@@ -335,30 +360,46 @@ function getBedsPatientsData($roomId) {
             xlt('hours') // Traducción de "horas"
         );
 
-        // Obtener Id del Paciente
-        $bedPatientId = $row['patient_id'];
-        // Obtener datos del paciente
-        $patientData = getPatientData($bedPatientId, "DOB, sex");
-        $bedPatientAge = getPatientAge(str_replace('-', '', $patientData['DOB']));
-        $bedPatientSex = text($patientData['sex']);
-        $result = getPatientData($bedPatientId, "fname,lname,mname,pubpid");
-        $bedPatientName = text($result['lname']) . ", " . text($result['fname']) . " " . text($result['mname']);
-        $bedPatientDNI = text($result['pubpid']);
+        // Datos del paciente (solo si está ocupada)
+        $bedPatientName = "";
+        $bedPatientDNI = "";
+        $bedPatientAge = "";
+        $bedPatientSex = "";
+        $bedPatientInsuranceName = "";
+        $bedPatientCare = [];
 
-        // Obtener datos del seguro
-        $insuranceData = getInsuranceData($bedPatientId, "primary", "insd.*, ic.name as provider_name");
-        $bedPatientInsuranceName = text($insuranceData['provider_name']);
+        if ($isOccupied && !empty($row['patient_id'])) {
+            $bedPatientId = $row['patient_id'];
+            // Obtener datos del paciente
+            $patientData = getPatientData($bedPatientId, "DOB, sex");
+            if ($patientData) {
+                $bedPatientAge = getPatientAge(str_replace('-', '', $patientData['DOB'] ?? ''));
+                $bedPatientSex = text($patientData['sex'] ?? '');
+            }
+            
+            $result = getPatientData($bedPatientId, "fname,lname,mname,pubpid");
+            if ($result) {
+                $bedPatientName = text($result['lname'] ?? '') . ", " . text($result['fname'] ?? '') . " " . text($result['mname'] ?? '');
+                $bedPatientDNI = text($result['pubpid'] ?? '');
+            }
 
-        $bedsPatientsId = $row['id'];
-        // Obtener los datos del cuidado del paciente usando la función getBedPatientCare
-        $bedPatientCare = getBedPatientCare($bedsPatientsId , $bedPatientId);
+            // Obtener datos del seguro
+            $insuranceData = getInsuranceData($bedPatientId, "primary", "insd.*, ic.name as provider_name");
+            $bedPatientInsuranceName = text($insuranceData['provider_name'] ?? '');
+
+            $bedsPatientsId = $row['id'];
+            // Obtener los datos del cuidado del paciente
+            $bedPatientCare = getBedPatientCare($bedsPatientsId , $bedPatientId);
+        } else {
+            $bedPatientId = 0;
+        }
 
         // Añadir la cama a la lista
         $bedPatients[] = [
             'id' => $row['id'],
             'bed_id' => $row['bed_id'],
             'bed_name' => $row['bed_name'],
-            'bed_type' => $row['bed_type'],
+            'bed_type' => $row['bed_type_title'] ?? xl('Unknown'),
             'bed_notes' => $row['notes'],
             'room_id' => $row['room_id'],
             'unit_id' => $row['unit_id'],

@@ -9,8 +9,6 @@ $behavioralRestrictions = sqlStatement("SELECT title FROM list_options WHERE lis
 $otherRestrictions = sqlStatement("SELECT title FROM list_options WHERE list_id = 'inpatient_other_restrictions'");
 
 // Consulta SQL para obtener los cuidados iniciales
-$careOptions = sqlStatement("SELECT title, notes FROM list_options WHERE list_id = 'inpatient_care'");
-echo $bedPatient['id'];
 ?>
 <!-- Estilos adicionales -->
 <style>
@@ -47,7 +45,6 @@ echo $bedPatient['id'];
                     <h5 class="modal-title text-center" id="assignBedPatientModalLabel">
                         <!-- Nombre del paciente y la cama como título principal -->
                         <?= xlt('Assign this Bed') ?> - <?= htmlspecialchars($bedPatient['bed_name']) ?> - <?= xlt('Patient') ?>: <?= htmlspecialchars($patient_name) ?>
-                        <?php echo $bedPatient['id']; ?>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -202,39 +199,41 @@ echo $bedPatient['id'];
 
 <script>
 $(document).ready(function() {
-    // Evento que se dispara cuando se muestra el modal
-    $('#assignBedPatientModal<?= $bedPatient['id'] ?>').on('shown.bs.modal', function () {
+    const modalId = '#assignBedPatientModal<?= $bedPatient['id'] ?>';
+    const careSelectId = '#care<?= $bedPatient['id'] ?>';
+    const careIconId = '#care-icon-<?= $bedPatient['id'] ?>';
+    const careTitleId = '#care-title-<?= $bedPatient['id'] ?>';
 
-        // Verifica si el elemento #care existe en el DOM
-        var $careSelect = $('#care<?= $bedPatient['id'] ?>');  // Asegúrate de que el ID es único
-        if ($careSelect.length > 0) {
-            // Quita cualquier evento previo y luego añade el listener al select
-            $careSelect.off('change').on('change', function() {
-                updateCareIcon();  // Llama a la función cuando cambie la selección
-            });
+    // Función para actualizar el icono y el título del cuidado
+    function updateCareIcon() {
+        const $selectedOption = $(careSelectId + ' option:selected');
+        const careIconPath = $selectedOption.val();
+        const careTitle = $selectedOption.data('title');
+        const $careIcon = $(careIconId);
+        const $careTitle = $(careTitleId);
+
+        if (careIconPath) {
+            $careIcon.attr('src', careIconPath).show();
+            $careTitle.text(careTitle);
         } else {
-            console.error("Element #care not found in DOM");
+            // Valores por defecto si no hay nada seleccionado
+            $careIcon.attr('src', '../images/stable_level_icon.svg').show();
+            $careTitle.text('<?php echo xlt('Stable'); ?>');
         }
+        
+        // Sincronizar campo oculto para el título
+        $('#patientCareTitle<?= $bedPatient['id'] ?>').val(careTitle || '<?php echo xlt('Stable'); ?>');
+    }
+
+    // Evento cuando se abre el modal para inicializar
+    $(modalId).on('shown.bs.modal', function () {
+        updateCareIcon();
     });
 
-    function updateCareIcon() {
-        // Selecciona la opción elegida con jQuery
-        var $selectedOption = $('#care<?= $bedPatient['id'] ?> option:selected');
-        var selectedCareIcon = $selectedOption.val();  // Obtiene el valor de la opción seleccionada
-        var selectedTitle = $selectedOption.data('title');  // Obtiene el atributo 'data-title'
-        var $careIcon = $('#care-icon-<?= $bedPatient['id'] ?>');
-        var $careTitle = $('#care-title-<?= $bedPatient['id'] ?>');
-
-        if (!selectedCareIcon) {
-            $careIcon.attr('src', '../images/critical_level_icon.svg');  // Ícono por defecto
-            $careIcon.show();
-            $careTitle.text('No care icon selected');
-        } else {
-            $careIcon.attr('src', selectedCareIcon);  // Establece el ícono seleccionado
-            $careIcon.show();
-            $careTitle.text(selectedTitle);  // Muestra el título correspondiente
-        }
-    }
+    // Evento cuando cambia el select
+    $(document).on('change', careSelectId, function() {
+        updateCareIcon();
+    });
 });
 
 // Script JavaScript para Validación, Autocompletado y verifica responsable functions.js -->

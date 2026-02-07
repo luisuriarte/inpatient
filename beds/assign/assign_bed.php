@@ -3,7 +3,7 @@ require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
 // Iniciar sesión y usar un subespacio
-session_start();
+//session_start();
 $sessionKey = 'bed_management';
 
 // Obtener usuario autenticado
@@ -18,15 +18,27 @@ $facilityName = $_GET['facility_name'] ?? ($_SESSION[$sessionKey]['context']['fa
 $unitId = $_GET['unit_id'] ?? ($_SESSION[$sessionKey]['context']['unit_id'] ?? null);
 $unitName = $_GET['unit_name'] ?? ($_SESSION[$sessionKey]['context']['unit_name'] ?? '');
 
-// Datos del paciente desde GET (Relocation o Assign) o sesión
+// Datos del paciente: Priorizar variables globales de OpenEMR, luego GET, luego sesión
+$patient_id = isset($patient_id) ? $patient_id : ($_GET['patient_id'] ?? $_GET['patient_id_relocate'] ?? $_SESSION['pid'] ?? ($_SESSION[$sessionKey]['patient_id'] ?? null));
+$patient_name = isset($patient_name) ? $patient_name : ($_GET['patient_name'] ?? $_GET['patient_name_relocate'] ?? $_SESSION['patient_name'] ?? ($_SESSION[$sessionKey]['patient_name'] ?? null));
+
 $patientData = [
-    'id' => $_GET['patient_id'] ?? $_GET['patient_id_relocate'] ?? ($_SESSION[$sessionKey]['patient_id'] ?? null),
-    'name' => $_GET['patient_name'] ?? $_GET['patient_name_relocate'] ?? ($_SESSION[$sessionKey]['patient_name'] ?? null),
-    'dni' => $_GET['patient_dni_relocate'] ?? ($_SESSION[$sessionKey]['patient_dni'] ?? null),
-    'age' => $_GET['patient_age_relocate'] ?? ($_SESSION[$sessionKey]['patient_age'] ?? null),
-    'sex' => $_GET['patient_sex_relocate'] ?? ($_SESSION[$sessionKey]['patient_sex'] ?? null),
-    'insurance' => $_GET['insurance_name_relocate'] ?? ($_SESSION[$sessionKey]['insurance_name'] ?? null),
+    'id' => $patient_id,
+    'name' => $patient_name,
+    'dni' => isset($patient_dni) ? $patient_dni : ($_GET['patient_dni_relocate'] ?? $_SESSION[$sessionKey]['patient_dni'] ?? null),
+    'age' => isset($patient_age) ? $patient_age : ($_GET['patient_age_relocate'] ?? $_SESSION[$sessionKey]['patient_age'] ?? null),
+    'sex' => isset($patient_sex) ? $patient_sex : ($_GET['patient_sex_relocate'] ?? $_SESSION[$sessionKey]['patient_sex'] ?? null),
+    'pubpid' => $_GET['patient_pubpid_relocate'] ?? ($_SESSION[$sessionKey]['patient_pubpid'] ?? null),
+    'insurance' => isset($insurance_name) ? $insurance_name : ($_GET['insurance_name_relocate'] ?? ($_SESSION[$sessionKey]['insurance_name'] ?? null)),
 ];
+
+// Si tenemos ID pero no nombre (p.ej. vino del PID global), buscar el nombre
+if ($patientData['id'] && empty($patientData['name'])) {
+    $patient_res = getPatientData($patientData['id'], "fname, lname");
+    if ($patient_res) {
+        $patientData['name'] = $patient_res['fname'] . ' ' . $patient_res['lname'];
+    }
+}
 
 // Guardar paciente en sesión si viene de Assign o Relocation
 if ($_GET['patient_id'] || $_GET['patient_id_relocate']) {
@@ -132,7 +144,7 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
                 <div class="card facility-card text-center" onclick="window.location.href='?view=units&facility_id=<?php echo urlencode($facility['id']); ?>&facility_name=<?php echo urlencode($facility['name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <i class="fas fa-hospital-alt"></i>
+                                <i class="fas fa-hospital-alt" style="color: #0d47a1;"></i>
                                 <?php echo htmlspecialchars($facility['name']); ?>
                             </h5>
                             <!-- <p class="card-text text-primary"><?php echo xl('Beds Total'); ?>: <span class="badge bg-primary"><?php echo $facility['total_beds']; ?></span></p> -->
@@ -245,15 +257,19 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
 
     <?php elseif ($view === 'units'): ?>
         <!-- Mostrar Unidades -->
-        <h1><?php echo xl('Select a Unit'); ?></h1>
+        <h1 class="mb-4">
+        <i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo htmlspecialchars($facilityName); ?>: 
+        <small class="text-muted"><?php echo xl('Select a Unit'); ?></small>
+    </h1>
         <div class="row">
             <?php foreach ($units as $unit): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
                 <div class="card unit-card text-center" onclick="window.location.href='?view=rooms&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&unit_id=<?php echo urlencode($unit['id']); ?>&unit_name=<?php echo urlencode($unit['unit_name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <i class="fas fa-hospital-alt"></i>
+                                <i class="fas fa-layer-group" style="color: #00897b;"></i>
                                 <?php echo htmlspecialchars($unit['unit_name']); ?>
+                                <small class="text-muted d-block"><i class="fas fa-stairs" style="color: #616161;"></i> <?php echo xl('Floor'); ?>: <?php echo htmlspecialchars($unit['unit_floor']); ?></small>
                             </h5>
                             <!-- <p class="card-text text-primary"><?php echo xl('Beds Total'); ?>: <span class="badge bg-primary"><?php echo $unit['total_beds']; ?></span></p> -->
                             <canvas id="chart-<?php echo $unit['id']; ?>" height="200"></canvas> <!-- Canvas para el gráfico -->
@@ -364,15 +380,19 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
 
     <?php elseif ($view === 'rooms'): ?>
         <!-- Mostrar Cuartos -->
-        <h1><?php echo xl('Select a Room'); ?></h1>
+        <h1 class="mb-4">
+        <i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo htmlspecialchars($unitName); ?>: 
+        <small class="text-muted"><?php echo xl('Select a Room'); ?></small>
+    </h1>
         <div class="row">
             <?php foreach ($rooms as $room): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
                 <div class="card room-card text-center" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_sector=<?php echo urlencode($room['room_sector']); ?>&unit_id=<?php echo urlencode($unitId); ?>&unit_name=<?php echo urlencode($unitName); ?>&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <i class="fas fa-hospital-alt"></i>
+                                <i class="fas fa-door-open" style="color: #e65100;"></i>
                                 <?php echo htmlspecialchars($room['room_name']); ?>
+                                <small class="text-muted d-block"><i class="fas fa-map-marker-alt" style="color: #7b1fa2;"></i> <?php echo xl('Type'); ?>: <?php echo htmlspecialchars($room['room_type']); ?></small>
                             </h5>
                             <!-- <p class="card-text text-primary"><?php echo xl('Beds Total'); ?>: <span class="badge bg-primary"><?php echo $room['total_beds']; ?></span></p> -->
                             <canvas id="chart-<?php echo $room['id']; ?>" height="200"></canvas> <!-- Canvas para el gráfico -->

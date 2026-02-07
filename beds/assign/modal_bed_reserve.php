@@ -7,7 +7,6 @@
                     <h5 class="modal-title" id="reserveModalLabel<?= $bedPatient['id'] ?>">
                         <?= xlt('Reserve this Bed') ?> - <?= htmlspecialchars($bedPatient['bed_name']) ?> - <?= xlt('Patient') ?>: <?= htmlspecialchars($patient_name) ?>
                     </h5>
-                    <?php echo $bedPatient['id']; ?>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">

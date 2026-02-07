@@ -47,6 +47,7 @@ if (isset($_GET['warningMessage'])) {
     <title><?php echo xlt('List of Units'); ?></title>
     <link rel="stylesheet" href="../../styles.css"> <!-- Enlace al archivo CSS externo -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
@@ -82,9 +83,9 @@ if (isset($_GET['warningMessage'])) {
         <?php endif; ?>
 
         <?php if ($centroName): ?>
-            <h1><?php echo xlt('Units for the center') . ': ' .  htmlspecialchars($centroName); ?></h1>
+            <h1><i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo xlt('Units for the center') . ': ' .  htmlspecialchars($centroName); ?></h1>
         <?php else: ?>
-            <h1><?php echo xlt('No center selected'); ?></h1>
+            <h1><i class="fas fa-exclamation-triangle text-warning"></i> <?php echo xlt('No center selected'); ?></h1>
         <?php endif; ?>
 
         <form method="get" class="mb-3">
@@ -147,11 +148,11 @@ if (isset($_GET['warningMessage'])) {
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <p><strong><?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
-                                            <p><strong><?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unit['unit_name']); ?></p>
+                                            <p><strong><i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo xlt('Facility'); ?>:</strong> <?php echo htmlspecialchars($centroName); ?></p>
+                                            <p><strong><i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo xlt('Unit'); ?>:</strong> <?php echo htmlspecialchars($unit['unit_name']); ?></p>
 
                                             <!-- Campo Floor -->
-                                            <p><strong><?php echo xlt('Floor'); ?>:</strong> 
+                                            <p><strong><i class="fas fa-stairs" style="color: #616161;"></i> <?php echo xlt('Floor'); ?>:</strong> 
                                                 <?php
                                                 // Obtener el nombre del piso desde list_options
                                                 $floorQuery = "SELECT title FROM list_options WHERE list_id = 'unit_floor' AND option_id = ?";

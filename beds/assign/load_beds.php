@@ -48,13 +48,44 @@ if ($_GET['patient_id_relocate'] || $bedAction === 'Relocation') {
 // Título según la acción
 $bedActionTitle = ($bedAction === 'Relocation') ? xlt('Patient Relocate') : xlt('Beds Assign');
 
-// Obtener datos del cuarto y camas
-$query = "SELECT * FROM rooms WHERE id = ?";
+// Obtener datos del cuarto, unidad y camas
+$query = "SELECT r.*, u.unit_name, lo.title AS floor_title, ls.title AS sector_title FROM rooms AS r 
+          LEFT JOIN units AS u ON r.unit_id = u.id 
+          LEFT JOIN list_options AS lo ON u.floor = lo.option_id AND lo.list_id = 'unit_floor'
+          LEFT JOIN list_options AS ls ON r.sector = ls.option_id AND ls.list_id = 'room_sector'
+          WHERE r.id = ?";
 $result = sqlStatement($query, [$roomId]);
 $room = sqlFetchArray($result);
 $bedPatients = getBedsPatientsData($roomId);
 
+$roomName = $room['room_name'] ?? 'Unknown';
+$roomSector = $room['sector_title'] ?? $room['sector'] ?? 'Unknown';
+$unitName = $room['unit_name'] ?? $context['unit_name'] ?? 'Unknown';
+$unitFloor = $room['floor_title'] ?? $context['unit_floor'] ?? 'Unknown';
+$facilityName = $context['facility_name'] ?? 'Unknown';
+
+// Manejar el cambio de estado "Made Up" (Cleaning -> Vacant)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bedPatientId'])) {
+    $bedPatientId = intval($_POST['bedPatientId']);
+    $now = date('Y-m-d H:i:s');
+    
+    // Actualizar la condición a Vacant
+    $updateMadeUpQuery = "UPDATE beds_patients 
+                         SET `condition` = 'Vacant', 
+                             operation = 'Made Up', 
+                             user_modif = ?, 
+                             datetime_modif = ? 
+                         WHERE id = ? AND active = 1";
+                         
+    $updateMadeUpResult = sqlStatement($updateMadeUpQuery, [$userFullName, $now, $bedPatientId]);
+    
+    if ($updateMadeUpResult) {
+        // Recargar los datos después de la actualización
+        $bedPatients = getBedsPatientsData($roomId);
+    }
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -120,7 +151,6 @@ $features = [
 
 // Información adicional (label arriba, texto abajo)
 $additional_info = [
-    "sector" => ["label" => "Sector", "value" => $room['sector']],
     "room_type" => ["label" => "Room Type", "value" => $room['room_type']],
     "isolation_level" => ["label" => "Isolation Level", "value" => $room['isolation_level']],
     "status" => ["label" => "Room Status", "value" => $room['status']]
@@ -128,7 +158,17 @@ $additional_info = [
 
 ?>
 <div class="facility-info mb-4 text-center">
-    <h4><?php echo htmlspecialchars($facilityName) . ' - ' . xl('Unit') . ': ' . htmlspecialchars($unitId)  . ' - ' . xl('Floor') . ': ' . htmlspecialchars($unitFloor)  . ' - ' . xl('Room') . ': ' . htmlspecialchars($roomName) . ' - ' . xl('Sector') . ': ' . htmlspecialchars($roomSector); ?></h4>
+    <h4>
+        <i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo htmlspecialchars($facilityName); ?> 
+        <span class="mx-2">|</span>
+        <i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo xl('Unit'); ?>: <?php echo htmlspecialchars($unitName); ?>
+        <span class="mx-2">|</span>
+        <i class="fas fa-stairs" style="color: #616161;"></i> <?php echo xl('Floor'); ?>: <?php echo htmlspecialchars($unitFloor); ?>
+        <span class="mx-2">|</span>
+        <i class="fas fa-door-open" style="color: #e65100;"></i> <?php echo xl('Room'); ?>: <?php echo htmlspecialchars($roomName); ?>
+        <span class="mx-2">|</span>
+        <i class="fas fa-map-marker-alt" style="color: #7b1fa2;"></i> <?php echo xl('Sector'); ?>: <?php echo htmlspecialchars($roomSector); ?>
+    </h4>
 </div>
 
 <div class="bed-banner">
@@ -185,7 +225,6 @@ $additional_info = [
                                 <?php echo xlt(htmlspecialchars($bedPatient['bed_status'])); ?>
                             </span>
                         </p>
-                        <?php echo $bedPatient['id']; ?>
                         <div class="conditions">
                                 <?php foreach ($bedPatient['conditions'] as $condition): ?>
                                     <p class="card-text minimal-spacing">

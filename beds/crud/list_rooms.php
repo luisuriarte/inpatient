@@ -27,8 +27,14 @@ if ($cuarto && $cuarto['active'] == 0) {
 
 // Obtener las unidades utilizando sqlStatement()
 $roomsQuery = $showInactive ? 
-    "SELECT * FROM rooms WHERE unit_id = ? AND operation <> 'Delete'" : 
-    "SELECT * FROM rooms WHERE unit_id = ? AND active = 1 AND operation <> 'Delete'";
+    "SELECT r.*, lo.title AS sector_title 
+     FROM rooms AS r 
+     LEFT JOIN list_options AS lo ON r.sector = lo.option_id AND lo.list_id = 'room_sector'
+     WHERE r.unit_id = ? AND r.operation <> 'Delete'" : 
+    "SELECT r.*, lo.title AS sector_title 
+     FROM rooms AS r 
+     LEFT JOIN list_options AS lo ON r.sector = lo.option_id AND lo.list_id = 'room_sector'
+     WHERE r.unit_id = ? AND r.active = 1 AND r.operation <> 'Delete'";
 
 $roomsResult = sqlStatement($roomsQuery, [$unitId]);
 
@@ -46,6 +52,7 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
     <title>Lista de Cuartos</title>
     <link rel="stylesheet" href="../../styles.css"> <!-- Enlace al archivo CSS externo -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
@@ -83,9 +90,9 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
         <?php endif; ?>
 
         <?php if ($unitName): ?>
-            <h1><?php echo xlt('Rooms for Unity') . ' ' . $unitName; ?></h1>
+            <h1><i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo xlt('Rooms for Unity') . ' ' . $unitName; ?></h1>
         <?php else: ?>
-            <h1><?php echo xlt('A Room has not been selected'); ?></h1>
+            <h1><i class="fas fa-exclamation-triangle text-warning"></i> <?php echo xlt('A Room has not been selected'); ?></h1>
         <?php endif; ?>
 
         <form method="get" class="mb-3">
@@ -153,16 +160,16 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
                                         <!-- Primera fila: Labels -->
                                         <div class="row mb-2">
                                             <div class="col-md-3">
-                                                <div class="info-label"><?php echo xlt('Facility'); ?></div>
+                                                <div class="info-label"><i class="fas fa-hospital-alt" style="color: #0d47a1;"></i> <?php echo xlt('Facility'); ?></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="info-label"><?php echo xlt('Unit'); ?></div>
+                                                <div class="info-label"><i class="fas fa-layer-group" style="color: #00897b;"></i> <?php echo xlt('Unit'); ?></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="info-label"><?php echo xlt('Sector'); ?></div>
+                                                <div class="info-label"><i class="fas fa-map-marker-alt" style="color: #7b1fa2;"></i> <?php echo xlt('Sector'); ?></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="info-label"><?php echo xlt('Room'); ?></div>
+                                                <div class="info-label"><i class="fas fa-door-open" style="color: #e65100;"></i> <?php echo xlt('Room'); ?></div>
                                             </div>
                                         </div>
 
@@ -175,7 +182,7 @@ $showWarning = isset($_GET['showWarning']) ? $_GET['showWarning'] === 'true' : f
                                                 <div class="info-value"><strong><?php echo htmlspecialchars($unitName); ?></strong></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['sector']); ?></strong></div>
+                                                <div class="info-value"><strong><?php echo htmlspecialchars($room['sector_title'] ?? $room['sector'] ?? xl('Unknown')); ?></strong></div>
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="info-value"><strong><?php echo htmlspecialchars($room['room_name']); ?></strong></div>
