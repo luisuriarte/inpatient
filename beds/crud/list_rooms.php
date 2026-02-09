@@ -14,7 +14,7 @@ $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] == '0';
 $userId = $_SESSION['authUserID'];
 $userFullName = getuserFullName($userId);
 
-// Verificar si el centro está inactivo utilizando sqlStatement()
+// Verificar si el cuarto está inactivo utilizando sqlStatement()
 $cuartoQuery = "SELECT active FROM rooms WHERE id = ?";
 $cuartoResult = sqlStatement($cuartoQuery, [$roomId]);
 $cuarto = sqlFetchArray($cuartoResult);
@@ -25,7 +25,7 @@ if ($cuarto && $cuarto['active'] == 0) {
     exit;
 }
 
-// Obtener las unidades utilizando sqlStatement()
+// Obtener los cuartos utilizando sqlStatement()
 $roomsQuery = $showInactive ? 
     "SELECT r.*, lo.title AS sector_title 
      FROM rooms AS r 

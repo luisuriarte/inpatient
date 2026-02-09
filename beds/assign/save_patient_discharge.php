@@ -2,124 +2,87 @@
 require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
-// Verificar si la solicitud es POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Obtener los datos del formulario
     $bedsPatientsId = $_POST['beds_patients_id'] ?? null;
-    $bedId = intval($_POST['bed_id']) ?? null;
-    $bedName = htmlspecialchars($_POST['bed_name']) ?? null;
-    $bedStatus = htmlspecialchars($_POST['bed_status']) ?? null;
-    $bedType = htmlspecialchars($_POST['bed_type']) ?? null;
-    $patientId = intval($_POST['patient_id']) ?? null;
-    $responsibleUserId = intval($_POST['responsible_user_id_discharge']) ?? null;
-
-    $roomId = intval($_POST['room_id']) ?? null;
-    $roomName = htmlspecialchars($_POST['room_name']) ?? null;
-    $unitId = intval($_POST['unit_id']) ?? null;
-    $unitName = htmlspecialchars($_POST['unit_name']) ?? null;
-    $facilityId = intval($_POST['facility_id']) ?? null;
-    $facilityName = htmlspecialchars($_POST['facility_name']) ?? null;
+    $bedId = intval($_POST['bed_id']);
+    $patientId = intval($_POST['patient_id']);
+    $responsibleUserId = intval($_POST['responsible_user_id_discharge']);
+    
+    // Datos de ubicación para la redirección
+    $roomId = intval($_POST['room_id']);
+    $unitId = intval($_POST['unit_id']);
+    $facilityId = intval($_POST['facility_id']);
+    
     $userId = $_SESSION['authUserID'];
     $userFullName = getUserFullName($userId);
+    $now = date('Y-m-d H:i:s');
     $notes = text($_POST['notes'] ?? '');
-    $dischargeDate = date('Y-m-d H:i:s');
-    $dischargeDisposition = htmlspecialchars($_POST['discharge_disposition']) ?? null;
-    $bedAction = htmlspecialchars($_POST['bed_action']);
-    $operation = htmlspecialchars($bedAction);
     $cleaning = $_POST['cleaning'] ?? null;
-    $backgroundPatientCard = htmlspecialchars($_POST['background_card']);
 
-    // Validar si todos los datos requeridos están presentes
-    if ($bedsPatientsId && $responsibleUserId && $bedId) {
-        // Obtener la fecha y hora actual
-        $now = date('Y-m-d H:i:s');
-
-        // Iniciar la transacción
+    if ($bedsPatientsId && $patientId) {
         $database->StartTrans();
 
         try {
-            // Actualizar el registro de beds_patients con la información de discharge
+            // 1. OBTENER DATOS DE LA CAMA ANTES DEL ALTA (Para el Tracker)
+            $oldDataQuery = "SELECT bed_name, bed_status, bed_type FROM beds_patients WHERE id = ?";
+            $oldData = sqlQuery($oldDataQuery, [$bedsPatientsId]);
+
+            // 2. ACTUALIZAR EL REGISTRO ACTUAL (Cerrar internación del paciente)
+            // Usamos 'Archived' o 'Historical' para indicar que esta estancia terminó
             $updateQuery = "UPDATE beds_patients 
                             SET responsible_user_id = ?, 
                                 change_date = ?,
                                 discharge_disposition = ?, 
-                                `condition` = 'Archival', 
+                                `condition` = 'Archived', 
                                 notes = ?, 
                                 operation = 'Discharge', 
                                 user_modif = ?, 
                                 datetime_modif = ?, 
                                 active = 0 
                             WHERE id = ?";
-
-            // Parámetros para la consulta de actualización
-            $updateResult = sqlStatement($updateQuery, [
-                $responsibleUserId,  // ID de usuario responsable
-                $dischargeDate,      // Fecha de alta
-                $dischargeDisposition,
-                $notes,              // Notas de alta
-                $userFullName,           // Usuario que modifica
-                $dischargeDate,      // Fecha y hora de modificación
-                $bedsPatientsId      // ID de beds_patients
+            
+            sqlStatement($updateQuery, [
+                $responsibleUserId, $now, $_POST['discharge_disposition'], 
+                $notes, $userFullName, $now, $bedsPatientsId
             ]);
 
-            // Verificar si la actualización fue exitosa
-            if ($updateResult) {
-                // Nueva condición basada en el checkbox de limpieza
-                $newCondition = $cleaning ? 'Cleaning' : 'Vacant';
+            // 3. INSERTAR EN EL TRACKER (Auditoría de Salida)
+            $insertTrackerQuery = "INSERT INTO beds_patients_tracker (
+                patient_id, bed_id_from, room_id_from, bed_name_from, unit_id_from, facility_id_from,
+                bed_id_to, move_date, responsible_user_id, reason, notes, user_modif, datetime_modif
+            ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'Discharge', ?, ?, ?)";
 
-                // Consulta de inserción con escapado de la columna `condition`
-                $insertQuery = "INSERT INTO beds_patients (
-                                    bed_id, room_id, unit_id, facility_id, 
-                                    bed_name, bed_status, bed_type, 
-                                    `condition`, operation, user_modif, 
-                                    datetime_modif, active
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Primed', ?, ?, 1)";
+            sqlStatement($insertTrackerQuery, [
+                $patientId, $bedId, $roomId, $oldData['bed_name'], $unitId, $facilityId,
+                $now, $responsibleUserId, $notes, $userFullName, $now
+            ]);
 
-                // Parámetros para la consulta de inserción
-                $insertResult = sqlStatement($insertQuery, [
-                    $bedId,
-                    $roomId,
-                    $unitId,
-                    $facilityId,
-                    $bedName,
-                    $bedStatus,
-                    $bedType,
-                    $newCondition,
-                    $userFullName,
-                    $now
-                ]);
+            // 4. PREPARAR LA CAMA PARA EL SIGUIENTE (Nuevo registro vacío)
+            $newCondition = $cleaning ? 'Cleaning' : 'Vacant';
+            $insertNewBedQuery = "INSERT INTO beds_patients (
+                bed_id, room_id, unit_id, facility_id, 
+                bed_name, bed_status, bed_type, 
+                `condition`, operation, user_modif, 
+                datetime_modif, active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Primed', ?, ?, 1)";
 
-                // Verificar si la inserción fue exitosa
-                if ($insertResult) {
-                    // Confirmar la transacción
-                    $database->CompleteTrans();
+            sqlStatement($insertNewBedQuery, [
+                $bedId, $roomId, $unitId, $facilityId,
+                $_POST['bed_name'], $_POST['bed_status'], $_POST['bed_type'],
+                $newCondition, $userFullName, $now
+            ]);
 
-                    // Redirigir a la página deseada
-                    header("Location: load_beds.php?room_id=" . urlencode($roomId) . 
-                           "&room_name=" . urlencode($roomName) . 
-                           "&unit_id=" . urlencode($unitId) . 
-                           "&unit_name=" . urlencode($unitName) . 
-                           "&facility_id=" . urlencode($facilityId) . 
-                           "&facility_name=" . urlencode($facilityName) . 
-                           "&bed_action=" . urlencode($bedAction) . 
-                           "&background_card=" . urlencode($backgroundPatientCard));
-                    exit();
-                } else {
-                    echo "Error al preparar la cama.";
-                    $database->FailTrans();
-                }
-            } else {
-                echo "Error al actualizar la información de discharge.";
-                $database->FailTrans();
-            }
+            $database->CompleteTrans();
+
+            // Redirección Exitosa
+            header("Location: load_beds.php?room_id=" . urlencode($roomId) . "&status=discharged");
+            exit();
+
         } catch (Exception $e) {
-            // Error en la transacción
-            echo "Ocurrió un error: " . $e->getMessage();
             $database->FailTrans();
+            error_log("Error en Discharge: " . $e->getMessage());
+            header("Location: load_beds.php?status=error&msg=" . urlencode($e->getMessage()));
+            exit();
         }
-    } else {
-        echo "Datos incompletos. Verifique e intente nuevamente.";
     }
 }
-
-?>

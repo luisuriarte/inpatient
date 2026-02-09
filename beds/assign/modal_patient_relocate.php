@@ -11,6 +11,10 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
             <form id="relocateForm<?= $bedPatient['id'] ?>" action="save_patient_relocate.php" method="POST">
                     <input type="hidden" name="beds_patients_id" value="<?= $bedPatient['bp_id']; ?>">
                     <input type="hidden" name="from_id_beds_patients" value="<?= $fromIdBedsPatients; ?>">
+                    <input type="hidden" name="from_bed_id" value="<?= $fromBedId; ?>">
+                    <input type="hidden" name="from_room_id" value="<?= $fromRoomId; ?>">
+                    <input type="hidden" name="from_unit_id" value="<?= $fromUnitId; ?>">
+                    <input type="hidden" name="from_facility_id" value="<?= $fromFacilityId; ?>">
                     <!-- Campo oculto para el ID del paciente -->
                     <input type="hidden" name="patient_id" value="<?= $patientData['id'] ?>" />
                     <!-- Campo oculto para el ID y datos de la cama -->

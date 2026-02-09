@@ -18,6 +18,12 @@ $facilityName = $_GET['facility_name'] ?? ($_SESSION[$sessionKey]['context']['fa
 $unitId = $_GET['unit_id'] ?? ($_SESSION[$sessionKey]['context']['unit_id'] ?? null);
 $unitName = $_GET['unit_name'] ?? ($_SESSION[$sessionKey]['context']['unit_name'] ?? '');
 
+// Datos de origen para reubicación
+$fromBedId = $_GET['from_bed_id'] ?? null;
+$fromRoomId = $_GET['from_room_id'] ?? null;
+$fromUnitId = $_GET['from_unit_id'] ?? null;
+$fromFacilityId = $_GET['from_facility_id'] ?? null;
+
 // Datos del paciente: Priorizar REUBICACIÓN (GET), luego SELECCIÓN (GET), luego VARIABLES GLOBALES (SESSION)
 if (isset($_GET['patient_id_relocate']) && !empty($_GET['patient_id_relocate'])) {
     $patient_id = $_GET['patient_id_relocate'];
@@ -78,7 +84,7 @@ if ($patientData['id']) {
             $modeText = 'Relocation Mode';
             break;
         case 'Management':
-            $bedActionTitle = xlt('Inpatient Management Board');
+            $bedActionTitle = xlt('Patient Check-Out / Relocate');
             $backgroundPatientCard = '#e3f2fd'; // Azul claro para gestión
             $modeText = 'Management Mode';
             break;
@@ -95,34 +101,48 @@ if ($patientData['id']) {
 
 // REDIRECCIÓN AUTOMÁTICA: Si estamos en modo 'Management' y el paciente ya tiene cama, ir directo a ella.
 if ($bedAction === 'Management' && !empty($patientData['id'])) {
-    // Buscar si el paciente tiene una cama asignada activa
-    $checkBedQuery = "SELECT bp.bed_id, b.room_id, b.unit_id, b.facility_id, 
-                             r.room_name, u.unit_name, f.name as facility_name
+    // Buscar si el paciente tiene una internación activa
+    $checkBedQuery = "SELECT 
+                        bp.id as beds_patients_id, 
+                        bp.current_bed_id, 
+                        bp.current_room_id, 
+                        bp.current_unit_id, 
+                        bp.facility_id,
+                        bp.status,
+                        b.bed_name, 
+                        r.room_name, 
+                        u.unit_name, 
+                        f.name as facility_name
                       FROM beds_patients bp
-                      JOIN beds b ON bp.bed_id = b.id
-                      JOIN rooms r ON b.room_id = r.id
-                      JOIN units u ON b.unit_id = u.id
-                      JOIN facility f ON b.facility_id = f.id
-                      WHERE bp.patient_id = ? AND bp.active = 1";
+                      LEFT JOIN beds b ON bp.current_bed_id = b.id
+                      LEFT JOIN rooms r ON bp.current_room_id = r.id
+                      LEFT JOIN units u ON bp.current_unit_id = u.id
+                      LEFT JOIN facility f ON bp.facility_id = f.id
+                      WHERE bp.patient_id = ? 
+                      AND bp.status IN ('preadmitted', 'admitted')
+                      LIMIT 1";
                       
-    $checkBedRes = sqlStatement($checkBedQuery, [$patientData['id']]);
-    $existingBed = sqlFetchArray($checkBedRes);
-
-    if ($existingBed) {
+    $existingBed = sqlQuery($checkBedQuery, [$patientData['id']]);
+    
+    if ($existingBed && $existingBed['current_bed_id']) {
         // Construir URL de redirección
         $redirectUrl = "load_beds.php?view=room" . 
-                       "&room_id=" . urlencode($existingBed['room_id']) . 
+                       "&room_id=" . urlencode($existingBed['current_room_id']) . 
                        "&room_name=" . urlencode($existingBed['room_name']) . 
-                       "&unit_id=" . urlencode($existingBed['unit_id']) . 
+                       "&unit_id=" . urlencode($existingBed['current_unit_id']) . 
                        "&unit_name=" . urlencode($existingBed['unit_name']) . 
                        "&facility_id=" . urlencode($existingBed['facility_id']) . 
                        "&facility_name=" . urlencode($existingBed['facility_name']) . 
                        "&bed_action=" . urlencode($bedAction) . 
                        "&background_card=" . urlencode($backgroundPatientCard) .
-                       "&patient_id=" . urlencode($patientData['id']); // Asegurar que el ID viaje
+                       "&patient_id=" . urlencode($patientData['id']) .
+                       "&beds_patients_id=" . urlencode($existingBed['beds_patients_id']);
         
         header("Location: " . $redirectUrl);
         exit;
+    } else if ($existingBed) {
+        // Tiene internación pero sin cama asignada (raro, pero manejarlo)
+        echo "<div class='alert alert-warning'>El paciente tiene una internación activa pero sin cama asignada actualmente.</div>";
     }
 }
 
@@ -311,7 +331,7 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
         <div class="row">
             <?php foreach ($units as $unit): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
-                <div class="card unit-card text-center" onclick="window.location.href='?view=rooms&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&unit_id=<?php echo urlencode($unit['id']); ?>&unit_name=<?php echo urlencode($unit['unit_name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>&from_id_beds_patients=<?php echo urlencode($_GET['from_id_beds_patients'] ?? ''); ?>&patient_id_relocate=<?php echo urlencode($patientData['id'] ?? ''); ?>&patient_name_relocate=<?php echo urlencode($patientData['name'] ?? ''); ?>'">
+                <div class="card unit-card text-center" onclick="window.location.href='?view=rooms&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&unit_id=<?php echo urlencode($unit['id']); ?>&unit_name=<?php echo urlencode($unit['unit_name']); ?>&bed_action=<?php echo urlencode($bedAction); ?>&from_id_beds_patients=<?php echo urlencode($_GET['from_id_beds_patients'] ?? ''); ?>&from_bed_id=<?php echo urlencode($fromBedId ?? ''); ?>&from_room_id=<?php echo urlencode($fromRoomId ?? ''); ?>&from_unit_id=<?php echo urlencode($fromUnitId ?? ''); ?>&from_facility_id=<?php echo urlencode($fromFacilityId ?? ''); ?>&patient_id_relocate=<?php echo urlencode($patientData['id'] ?? ''); ?>&patient_name_relocate=<?php echo urlencode($patientData['name'] ?? ''); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-layer-group" style="color: #00897b;"></i>
@@ -434,7 +454,7 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
         <div class="row">
             <?php foreach ($rooms as $room): ?>
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
-                <div class="card room-card text-center" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_sector=<?php echo urlencode($room['room_sector']); ?>&unit_id=<?php echo urlencode($unitId); ?>&unit_name=<?php echo urlencode($unitName); ?>&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>&from_id_beds_patients=<?php echo urlencode($_GET['from_id_beds_patients'] ?? ''); ?>&patient_id_relocate=<?php echo urlencode($patientData['id'] ?? ''); ?>&patient_name_relocate=<?php echo urlencode($patientData['name'] ?? ''); ?>'">
+                <div class="card room-card text-center" onclick="window.location.href='load_beds.php?room_id=<?php echo urlencode($room['id']); ?>&room_name=<?php echo urlencode($room['room_name']); ?>&room_sector=<?php echo urlencode($room['room_sector']); ?>&unit_id=<?php echo urlencode($unitId); ?>&unit_name=<?php echo urlencode($unitName); ?>&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>&from_id_beds_patients=<?php echo urlencode($_GET['from_id_beds_patients'] ?? ''); ?>&from_bed_id=<?php echo urlencode($fromBedId ?? ''); ?>&from_room_id=<?php echo urlencode($fromRoomId ?? ''); ?>&from_unit_id=<?php echo urlencode($fromUnitId ?? ''); ?>&from_facility_id=<?php echo urlencode($fromFacilityId ?? ''); ?>&patient_id_relocate=<?php echo urlencode($patientData['id'] ?? ''); ?>&patient_name_relocate=<?php echo urlencode($patientData['name'] ?? ''); ?>'">
                         <div class="card-body">
                             <h5 class="card-title">
                                 <i class="fas fa-door-open" style="color: #e65100;"></i>

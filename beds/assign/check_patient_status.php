@@ -21,8 +21,7 @@ $query = "SELECT pd.pid
           FROM beds_patients bp
           JOIN patient_data pd ON bp.patient_id = pd.pid
           WHERE bp.patient_id = ? 
-          AND bp.condition = 'Occupied' 
-          AND bp.active = 1";
+          AND bp.status = 'admitted'";
 $result = sqlQuery($query, [$patientId]);
 
 $isAdmitted = !empty($result['pid']);

@@ -20,6 +20,35 @@ if ($patient_id && empty($patient_name)) {
 }
 
 $backgroundPatientCard = "#f6f9bc";
+
+// Lógica para el botón "Patient Check-Out / Relocate"
+$patientAdmitted = false;
+$managementUrl = "javascript:void(0);"; // Por defecto no hace nada si no cumple condiciones
+
+if ($patient_id) {
+    $checkBedQuery = "SELECT bp.current_bed_id, bp.current_room_id as room_id, bp.current_unit_id as unit_id, bp.facility_id, 
+                             r.room_name, u.unit_name, f.name as facility_name
+                      FROM beds_patients bp
+                      LEFT JOIN rooms r ON bp.current_room_id = r.id
+                      LEFT JOIN units u ON bp.current_unit_id = u.id
+                      LEFT JOIN facility f ON bp.facility_id = f.id
+                      WHERE bp.patient_id = ? AND bp.status IN ('admitted', 'preadmitted')";
+    $result = sqlStatement($checkBedQuery, [$patient_id]);
+    $existingBed = sqlFetchArray($result);
+
+    if ($existingBed) {
+        $patientAdmitted = true;
+        $managementUrl = "load_beds.php?view=room" . 
+                       "&room_id=" . urlencode($existingBed['room_id']) . 
+                       "&room_name=" . urlencode($existingBed['room_name']) . 
+                       "&unit_id=" . urlencode($existingBed['unit_id']) . 
+                       "&unit_name=" . urlencode($existingBed['unit_name']) . 
+                       "&facility_id=" . urlencode($existingBed['facility_id']) . 
+                       "&facility_name=" . urlencode($existingBed['facility_name']) . 
+                       "&bed_action=Management" . 
+                       "&patient_id=" . urlencode($patient_id);
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -51,12 +80,13 @@ $backgroundPatientCard = "#f6f9bc";
             <p><?php echo xl('Patient Check-In / Reserve'); ?></p>
         </a>
 
-        <!-- Botón para Gestión de Internación / Tablero (No requiere Paciente) -->
-        <a href="assign_bed.php?bed_action=Management" 
+        <!-- Botón para Gestión de Internación / Tablero (AHORA Requiere Paciente) -->
+        <a href="<?php echo $managementUrl; ?>" 
            class="btn btn-custom btn-success-custom" 
-           id="managementEntryBtn">
+           id="managementEntryBtn"
+           onclick="return handleManagementClick(event)">
             <i class="fas fa-chalkboard-user fa-2x mb-2"></i>
-            <p><?php echo xl('Inpatient Management Board'); ?></p>
+            <p><?php echo xl('Patient Check-Out / Relocate'); ?></p>
         </a>
 
         <!-- Botón para Buscar -->
@@ -97,6 +127,24 @@ function handleEntryClick(event, requiresPatient) {
         }
         return false;
     }
+    return true;
+}
+
+function handleManagementClick(event) {
+    // 1. Validar si hay paciente seleccionado (reutilizando la lógica anterior)
+    if (!handleEntryClick(event, true)) {
+        return false;
+    }
+
+    // 2. Validar si el paciente está internado
+    var isAdmitted = <?php echo $patientAdmitted ? 'true' : 'false'; ?>;
+    
+    if (!isAdmitted) {
+        event.preventDefault();
+        alert("<?php echo xlt('Selected patient is not currently admitted'); ?>");
+        return false;
+    }
+    
     return true;
 }
 </script>

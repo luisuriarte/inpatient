@@ -97,6 +97,7 @@ $date_format = isset($GLOBALS['date_display_format']) ? $GLOBALS['date_display_f
                             <th onclick="sortTable('sex')"><?php echo xlt('Sex'); ?><span id="sortIndicatorSex"></span></th>
                             <th onclick="sortTable('pubpid')"><?php echo xlt('External Id'); ?><span id="sortIndicatorPubpid"></span></th>
                             <th onclick="sortTable('insurance')"><?php echo xlt('Insurance'); ?><span id="sortIndicatorInsurance"></span></th>
+                            <th class="text-center"><?php echo xlt('Actions'); ?></th>
                         </tr>
                     </thead>
                     <tbody id="resultTable">
@@ -126,6 +127,33 @@ $date_format = isset($GLOBALS['date_display_format']) ? $GLOBALS['date_display_f
     <a href="assign.php" class="btn btn-secondary mt-4">
         <i class="fas fa-home"></i> <?php echo xl('Principal Board'); ?>
     </a>
+</div>
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-clock-rotate-left"></i> Historial: <span id="historyPatientName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Evento</th>
+                                <th>Origen (Cama/Hab)</th>
+                                <th>Destino (Cama/Hab)</th>
+                                <th>Responsable</th>
+                                <th>Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Bootstrap JS y jQuery -->
@@ -279,6 +307,11 @@ window.onload = function() {
                                 <td>${patient.sex}</td>
                                 <td>${patient.pubpid}</td>
                                 <td>${patient.insurance}</td>
+                                <td class="text-center">
+                                        <button class="btn btn-sm btn-info" onclick="viewHistory(${patient.pid}, '${patient.text}')" title="Ver Historial">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `);
                     });
@@ -326,6 +359,46 @@ function parseDateToTimestamp(dateString) {
     }
 
     return timestamp || 0; // Devuelve 0 si la fecha es inválida
+}
+function viewHistory(pid, patientName) {
+    // 1. Poner el nombre del paciente en el título del modal
+    $('#historyPatientName').text(patientName);
+    
+    // 2. Limpiar la tabla y mostrar mensaje de carga
+    $('#historyTableBody').html('<tr><td colspan="6" class="text-center">Cargando historial...</td></tr>');
+    
+    // 3. Abrir el modal manualmente
+    var myModal = new bootstrap.Modal(document.getElementById('historyModal'));
+    myModal.show();
+
+    // 4. Llamada AJAX para obtener los datos
+    $.ajax({
+        url: 'get_patient_history.php',
+        type: 'GET',
+        data: { pid: pid },
+        success: function(response) {
+            let html = '';
+            if (response && response.length > 0) {
+                response.forEach(move => {
+                    html += `
+                    <tr>
+                        <td>${move.move_date}</td>
+                        <td><span class="badge bg-secondary">${move.reason}</span></td>
+                        <td>${move.bed_from || '-'}</td>
+                        <td>${move.bed_to || '-'}</td>
+                        <td>${move.user}</td>
+                        <td><small>${move.notes || ''}</small></td>
+                    </tr>`;
+                });
+            } else {
+                html = '<tr><td colspan="6" class="text-center">No hay movimientos registrados para este paciente.</td></tr>';
+            }
+            $('#historyTableBody').html(html);
+        },
+        error: function() {
+            $('#historyTableBody').html('<tr><td colspan="6" class="text-center text-danger">Error al conectar con el servidor.</td></tr>');
+        }
+    });
 }
 function checkEnterKey(event) {
     if (event.key === "Enter") {

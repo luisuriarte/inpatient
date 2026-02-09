@@ -312,6 +312,11 @@ body {
     color: #fff;
 }
 
+.btn-success-custom {
+    background-color: #28a745;
+    color: #fff;
+}
+
 .patient-card {
     display: flex;
     flex-wrap: wrap;
