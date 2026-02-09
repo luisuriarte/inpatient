@@ -18,17 +18,21 @@ CREATE TABLE IF NOT EXISTS `beds` (
 
 CREATE TABLE IF NOT EXISTS `beds_patients` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `bed_id` int(11) DEFAULT NULL,
-  `room_id` int(11) NOT NULL,
-  `unit_id` int(11) NOT NULL,
+  `uuid` binary(64) DEFAULT NULL,
+  `patient_id` int(11) NOT NULL,
   `facility_id` int(11) NOT NULL,
-  `patient_id` int(11) DEFAULT NULL,
+  `admission_type` varchar(50) DEFAULT NULL COMMENT 'check_in, preadmission',
+  `admission_date` datetime NOT NULL,
+  `admission_user_id` int(11) NOT NULL,
+  `discharge_date` datetime DEFAULT NULL,
+  `discharge_user_id` int(11) DEFAULT NULL,
+  `discharge_disposition` varchar(100) DEFAULT NULL COMMENT 'home, transfer, deceased, etc.',
+  `status` varchar(50) NOT NULL COMMENT 'preadmitted, admitted, discharged',
+  `current_bed_id` int(11) DEFAULT NULL,
+  `current_room_id` int(11) DEFAULT NULL,
+  `current_unit_id` int(11) DEFAULT NULL,
   `responsible_user_id` int(11) DEFAULT NULL,
-  `assigned_date` datetime DEFAULT NULL,
-  `change_date` datetime DEFAULT NULL,
-  `discharge_disposition` varchar(100) DEFAULT NULL,
-  `condition` varchar(50) DEFAULT NULL COMMENT 'occupied, cleaning, free. list_options -> list_id = ''bed_condition''',
-  `patient_care` varchar(50) DEFAULT NULL COMMENT 'stable, serious, very serious, critical, Postoperative, Sepsis, Respiratory failure, Heart failure, Kidney failure, Coma\r\n. list_options -> list_id = ''inpatient_care''',
+  `patient_care` varchar(50) DEFAULT NULL,
   `inpatient_physical_restrictions` varchar(50) DEFAULT NULL,
   `inpatient_sensory_restrictions` varchar(50) DEFAULT NULL,
   `inpatient_cognitive_restrictions` varchar(50) DEFAULT NULL,
@@ -36,17 +40,14 @@ CREATE TABLE IF NOT EXISTS `beds_patients` (
   `inpatient_dietary_restrictions` varchar(50) DEFAULT NULL,
   `inpatient_other_restrictions` varchar(50) DEFAULT NULL,
   `notes` text DEFAULT NULL,
-  `operation` varchar(50) DEFAULT NULL,
   `user_modif` varchar(100) DEFAULT NULL,
   `datetime_modif` datetime DEFAULT NULL,
-  `bed_name` varchar(50) DEFAULT NULL,
-  `bed_status` varchar(100) DEFAULT NULL COMMENT 'Bed status during assignment - list_options -> list_id = bed_status',
-  `bed_type` varchar(100) DEFAULT NULL COMMENT 'Bed type during assignment - blist_options -> list_id = bed_type',
-  `active` tinyint(1) DEFAULT 1 COMMENT 'Active 1 = In Use, Active 0 = Historical',
   PRIMARY KEY (`id`),
-  KEY `id_index` (`id`) USING BTREE,
-  KEY `bed_id` (`bed_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  UNIQUE KEY `uuid` (`uuid`),
+  KEY `patient_id` (`patient_id`),
+  KEY `current_bed_id` (`current_bed_id`),
+  KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- openemr.rooms definition
 CREATE TABLE `rooms` (
@@ -189,33 +190,45 @@ ENGINE=InnoDB
 
 CREATE TABLE `beds_patients_tracker` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uuid` binary(64) DEFAULT NULL,
+  `beds_patients_id` int(11) NOT NULL COMMENT 'FK to beds_patients - la internación a la que pertenece',
   `patient_id` int(11) NOT NULL,
+  `movement_type` varchar(50) NOT NULL COMMENT 'admission, relocation, discharge, bed_reservation, bed_release',
+  `movement_date` datetime NOT NULL,
+  `responsible_user_id` int(11) NOT NULL,
   `bed_id_from` int(11) DEFAULT NULL,
   `room_id_from` int(11) DEFAULT NULL,
-  `bed_name_from` varchar(50) DEFAULT NULL,
-  `bed_status_from` varchar(100) DEFAULT NULL,
-  `bed_type_from` varchar(100) DEFAULT NULL,
   `unit_id_from` int(11) DEFAULT NULL,
   `facility_id_from` int(11) DEFAULT NULL,
   `bed_id_to` int(11) DEFAULT NULL,
-  `bed_name_to` varchar(50) DEFAULT NULL,
-  `bed_status_to` varchar(100) DEFAULT NULL,
-  `bed_type_to` varchar(100) DEFAULT NULL,
   `room_id_to` int(11) DEFAULT NULL,
   `unit_id_to` int(11) DEFAULT NULL,
   `facility_id_to` int(11) DEFAULT NULL,
-  `move_date` datetime NOT NULL,
-  `responsible_user_id` int(11) NOT NULL,
-  `reason` varchar(255) DEFAULT NULL COMMENT 'Reason for transfer',
+  `bed_condition_from` varchar(50) DEFAULT NULL,
+  `bed_condition_to` varchar(50) DEFAULT NULL,
+  `reason` varchar(255) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `user_modif` varchar(100) DEFAULT NULL,
   `datetime_modif` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`) USING BTREE,
-  KEY `patient_id` (`patient_id`) USING BTREE,
-  KEY `bed_id_from` (`bed_id_from`) USING BTREE,
-  KEY `bed_id_to` (`bed_id_to`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uuid` (`uuid`),
+  KEY `beds_patients_id` (`beds_patients_id`),
+  KEY `patient_id` (`patient_id`),
+  KEY `movement_date` (`movement_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `beds_status_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bed_id` int(11) NOT NULL,
+  `condition` varchar(50) NOT NULL COMMENT 'occupied, reserved, cleaning, vacant, archived',
+  `changed_date` datetime NOT NULL,
+  `changed_by_user_id` int(11) NOT NULL,
+  `related_beds_patients_id` int(11) DEFAULT NULL COMMENT 'Si el cambio está relacionado con una internación',
+  `notes` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `bed_id` (`bed_id`),
+  KEY `changed_date` (`changed_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'cleaning', 'Cleaning', 2, 0, 0, '', 'bed_cleaning_icon.svg|#0c34ea', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('bed_condition', 'occupied', 'Occupied', 3, 0, 0, '', 'bed_occupied_icon.svg|#C70039', '');
