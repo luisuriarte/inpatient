@@ -383,4 +383,8 @@ INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_val
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'a-sector', 'A Sector', 1, 0, 0.0, '', '', '');
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'b-ector', 'B Sector', 2, 0, 0.0, '', '', '');
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'east-wing', 'East Wing', 4, 0, 0.0, '', '', '');
+<<<<<<< HEAD
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'north-wing', 'North Wing', 3, 0, 0.0, '', '', '');
+=======
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'north-wing', 'North Wing', 3, 0, 0.0, '', '', '');
+>>>>>>> d74a03064f99ff3ab99f3388de1bf17407c46f53
