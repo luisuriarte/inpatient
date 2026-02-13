@@ -5,6 +5,8 @@ require_once('../../../interface/globals.php');
 require_once($GLOBALS['srcdir'] . '/patient.inc.php');
 require_once($GLOBALS['srcdir'] . '/options.inc.php');
 
+use OpenEMR\Core\Header;
+
 // Iniciar la sesión si no está iniciada (normalmente OpenEMR lo hace, pero por seguridad)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -101,12 +103,17 @@ $result = sqlStatement($sql_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo xlt('Medical Administration Record (MAR)'); ?></title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <?php Header::setupHeader(['datetime-picker']); ?>
+    
+    <!-- Material Icons (no incluido en OpenEMR por defecto) -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    <link rel="stylesheet" href="../../styles.css">
+    
+    <!-- Vis.js (no incluido en OpenEMR) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="../../styles.css">
     
     <!-- Estilos para manejar z-index de modales -->
     <style>
@@ -122,26 +129,25 @@ $result = sqlStatement($sql_query);
         #dynamicModalContainer .modal-backdrop {
             z-index: 99999 !important;
         }
+        
+        /* DateTimePicker debe estar por encima de todos los modales */
+        .xdsoft_datetimepicker {
+            z-index: 999999 !important;
+        }
     </style>
     
-     <!-- Cargar JavaScript: jQuery primero, luego Bootstrap, luego Vis.js -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"></script>
     <script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
-    <!-- <script src="../../functions.js"></script> -->
      
 </head>
 
 <body>
     <!-- Formulario de filtros -->
-    <form method="POST" action="" class="row mb-3 d-flex justify-content-center">
-        <div class="form-row">
+    <form method="POST" action="" class="mb-3">
+        <div class="row g-2">
             <!-- Dropdown Facility -->
-            <div class="col-md-3">
-                <label for="facility_id" class="form-label"><?php echo xlt('Select Facility'); ?></label>
-                <select name="facility_id" id="facility_id" class="form-select" onchange="this.form.submit()">
+            <div class="col-auto">
+                <label for="facility_id" class="form-label mb-1"><?php echo xlt('Select Facility'); ?></label>
+                <select name="facility_id" id="facility_id" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Facilities'); ?></option>
                     <?php while ($facility = sqlFetchArray($facilities)) { ?>
                         <option value="<?php echo $facility['id']; ?>" 
@@ -153,9 +159,9 @@ $result = sqlStatement($sql_query);
             </div>
 
             <!-- Dropdown Floor -->
-            <div class="col-md-3">
-                <label for="floor_id" class="form-label"><?php echo xlt('Select Floor'); ?></label>
-                <select name="floor_id" id="floor_id" class="form-select" <?php echo !$selected_facility ? 'disabled' : ''; ?> onchange="this.form.submit()">
+            <div class="col-auto">
+                <label for="floor_id" class="form-label mb-1"><?php echo xlt('Select Floor'); ?></label>
+                <select name="floor_id" id="floor_id" class="form-select form-select-sm" style="width: 150px;" <?php echo !$selected_facility ? 'disabled' : ''; ?> onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Floors'); ?></option>
                     <?php if ($selected_facility) {
                         while ($floor = sqlFetchArray($floors)) { ?>
@@ -169,9 +175,9 @@ $result = sqlStatement($sql_query);
             </div>
             
             <!-- Dropdown Unit -->
-            <div class="col-md-3">
-                <label for="unit_id" class="form-label"><?php echo xlt('Select Unit'); ?></label>
-                <select name="unit_id" id="unit_id" class="form-select" <?php echo !$selected_facility || !$selected_floor ? 'disabled' : ''; ?> onchange="this.form.submit()">
+            <div class="col-auto">
+                <label for="unit_id" class="form-label mb-1"><?php echo xlt('Select Unit'); ?></label>
+                <select name="unit_id" id="unit_id" class="form-select form-select-sm" style="width: 150px;" <?php echo !$selected_facility || !$selected_floor ? 'disabled' : ''; ?> onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Units'); ?></option>
                     <?php if ($selected_facility && $selected_floor) {
                         while ($unit = sqlFetchArray($units)) { ?>
@@ -185,9 +191,9 @@ $result = sqlStatement($sql_query);
             </div>
 
             <!-- Dropdown Room -->
-            <div class="col-md-3">
-                <label for="room_id" class="form-label"><?php echo xlt('Select Room'); ?></label>
-                <select name="room_id" id="room_id" class="form-select" <?php echo !$selected_unit ? 'disabled' : ''; ?> onchange="this.form.submit()">
+            <div class="col-auto">
+                <label for="room_id" class="form-label mb-1"><?php echo xlt('Select Room'); ?></label>
+                <select name="room_id" id="room_id" class="form-select form-select-sm" style="width: 150px;" <?php echo !$selected_unit ? 'disabled' : ''; ?> onchange="this.form.submit()">
                     <option value=""><?php echo xlt('All Rooms'); ?></option>
                     <?php if ($selected_unit) {
                         while ($room = sqlFetchArray($rooms)) { ?>
@@ -1327,6 +1333,24 @@ function reactivateAlarm(itemId) {
             $('#inpatientSearchModal').modal('hide');
             console.log("Modal cerrado vía evento desde mar.php");
             window.location.reload();
+        });
+
+        // Inicializar datetime picker para elementos dinámicos (como en care_plan)
+        $(document).on('mouseover', '.datepicker', function () {
+            const $this = $(this);
+            // Evitar inicialización múltiple
+            if ($this.data('xdsoft_datetimepicker')) {
+                return;
+            }
+            
+            $this.datetimepicker({
+                timepicker: true,
+                format: 'Y-m-d H:i',
+                step: 15,
+                yearStart: 1900,
+                scrollInput: false,
+                scrollMonth: false
+            });
         });
 
     </script>

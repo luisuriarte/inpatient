@@ -1,6 +1,7 @@
 <?php
 require_once("../../functions.php");
 require_once("../../../interface/globals.php");
+require_once($GLOBALS['srcdir'] . '/formatting.inc.php');
 
 $schedule_id = $_GET['schedule_id'] ?? null;
 if (!$schedule_id) {
@@ -15,9 +16,7 @@ $history_query = "
            ps.reaction_time, ps.reaction_notes, ps.reaction_severity,
            CONCAT(u.lname, ', ', u.fname, 
                IF(u.mname IS NOT NULL AND u.mname != '', CONCAT(' ', u.mname), '')
-           ) AS supplied_by_name,
-           DATE_FORMAT(ps.schedule_datetime, '%Y-%m-%d %h:%i %p') AS formatted_schedule,
-           DATE_FORMAT(ps.supply_datetime, '%Y-%m-%d %h:%i %p') AS formatted_supply
+           ) AS supplied_by_name
     FROM prescriptions_supply ps
     LEFT JOIN users u ON ps.supplied_by = u.id
     WHERE ps.schedule_id = ? AND status != 'Cancelled'
@@ -84,11 +83,11 @@ while ($count_row = sqlFetchArray($result_count)) {
                                 <span class="badge bg-secondary"><?php echo htmlspecialchars($row['dose_number']); ?></span>
                             </td>
                             <td>
-                                <small class="text-muted"><?php echo htmlspecialchars($row['formatted_schedule']); ?></small>
+                                <small class="text-muted"><?php echo oeFormatDateTime($row['schedule_datetime']); ?></small>
                             </td>
                             <td>
                                 <?php if ($row['supply_datetime']): ?>
-                                    <small><?php echo htmlspecialchars($row['formatted_supply']); ?></small>
+                                    <small><?php echo oeFormatDateTime($row['supply_datetime']); ?></small>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>

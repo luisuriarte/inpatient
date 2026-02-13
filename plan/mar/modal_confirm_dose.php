@@ -17,8 +17,8 @@ $medications_text = getMedicationsDetails($schedule_id);
 // Obtener usuarios autorizados para la lista desplegable
 $users = sqlStatement("SELECT id, CONCAT(u.lname, ', ', u.fname, IF(u.mname IS NOT NULL AND u.mname != '', CONCAT(' ', u.mname), '')) AS full_name FROM users AS u WHERE authorized = 1");
 
-// Formatear la fecha y hora actual para la infusión
-$infusion_datetime = date('Y-m-d\TH:i'); // Formato ISO para el input de fecha y hora
+// Formatear la fecha y hora actual para la infusión (formato yyyy-mm-dd HH:MM)
+$infusion_datetime = date('Y-m-d H:i');
 ?>
 
 <!-- Cuerpo de contenido de confirmación de dosis -->
@@ -29,7 +29,13 @@ $infusion_datetime = date('Y-m-d\TH:i'); // Formato ISO para el input de fecha y
 
 <div class="form-group mb-3">
     <label for="infusion_datetime"><?php echo xlt("Infusion Date and Time"); ?>:</label>
-    <input type="datetime-local" id="infusion_datetime" name="infusion_datetime" class="form-control" value="<?php echo attr($infusion_datetime); ?>" required>
+    <input type="text" 
+           id="infusion_datetime" 
+           name="infusion_datetime" 
+           class="form-control datepicker" 
+           value="<?php echo attr($infusion_datetime); ?>"
+           title="<?php echo xla('yyyy-mm-dd HH:MM'); ?>"
+           required>
 </div>
 
 <div class="form-group mb-3">
