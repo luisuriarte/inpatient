@@ -107,6 +107,23 @@ $result = sqlStatement($sql_query);
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="../../styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    
+    <!-- Estilos para manejar z-index de modales -->
+    <style>
+        /* Modal principal custom */
+        #marActionsModal {
+            z-index: 99999 !important;
+        }
+        
+        /* Modales Bootstrap en dynamicModalContainer deben estar por encima */
+        #dynamicModalContainer .modal {
+            z-index: 100000 !important;
+        }
+        #dynamicModalContainer .modal-backdrop {
+            z-index: 99999 !important;
+        }
+    </style>
+    
      <!-- Cargar JavaScript: jQuery primero, luego Bootstrap, luego Vis.js -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -231,6 +248,7 @@ $result = sqlStatement($sql_query);
                     </div>
                 </div>
             </div>
+        </div>
     <button type="button" class="btn btn-warning" onclick="silenceAllAlarms()">
         <i class="fas fa-volume-mute"></i> <?php echo xlt('Silence All Alarms'); ?>
     </button>
@@ -756,21 +774,26 @@ function reactivateAlarm(itemId) {
         });
         
         // ==========================================
-        // FUNCIONES PARA MODALES (CONSOLIDADAS)
+        // FUNCIÓN PRINCIPAL: ABRIR MODAL DE DOSIS (MEJORADA)
         // ==========================================
 
-        // Función para abrir el modal principal de MAR
         function openMarActionsModal(supplyId, scheduleId) {
             console.log('[openMarActionsModal] Opening for supply_id:', supplyId, 'schedule_id:', scheduleId);
 
+            // PASO 1: Limpiar TODO residual de Bootstrap
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+            
+            // PASO 2: Obtener el elemento del modal
             const modalEl = document.getElementById('marActionsModal');
-            if (!modalEl) {
-                console.error('[openMarActionsModal] Modal element not found!');
+            const modalBody = document.getElementById('marActionsModalBody');
+            if (!modalEl || !modalBody) {
+                console.error('[openMarActionsModal] Modal elements not found!');
                 return;
             }
             
-            // Cargar spinner
-            modalEl.querySelector('.modal-body').innerHTML = `
+            // PASO 3: Cargar spinner
+            modalBody.innerHTML = `
                 <div class="text-center p-4">
                     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                         <span class="visually-hidden">Loading...</span>
@@ -779,19 +802,19 @@ function reactivateAlarm(itemId) {
                 </div>
             `;
             
-            // Crear/obtener instancia del modal
-            let marModal = bootstrap.Modal.getInstance(modalEl);
-            if (!marModal) {
-                marModal = new bootstrap.Modal(modalEl, {
-                    backdrop: 'static',
-                    keyboard: true
-                });
-            }
+            // PASO 4: Mostrar el modal usando display block
+            modalEl.style.display = 'block';
             
-            // Mostrar modal inmediatamente con spinner
-            marModal.show();
+            // Debug: Verificar estado del modal
+            console.log('[openMarActionsModal] Modal display:', modalEl.style.display);
+            console.log('[openMarActionsModal] Modal computed display:', window.getComputedStyle(modalEl).display);
+            console.log('[openMarActionsModal] Modal rect:', modalEl.getBoundingClientRect());
+            console.log('[openMarActionsModal] Modal parent:', modalEl.parentElement);
+            console.log('[openMarActionsModal] Modal z-index:', window.getComputedStyle(modalEl).zIndex);
             
-            // Cargar contenido vía AJAX
+            console.log('[openMarActionsModal] Modal shown, loading content...');
+            
+            // PASO 5: Cargar contenido vía AJAX
             $.ajax({
                 url: '<?php echo $GLOBALS['webroot']; ?>/inpatient/plan/mar/modal_mar_actions.php',
                 method: 'GET',
@@ -801,11 +824,11 @@ function reactivateAlarm(itemId) {
                 },
                 success: function(response) {
                     console.log('[openMarActionsModal] Content loaded successfully');
-                    modalEl.querySelector('.modal-body').innerHTML = response;
+                    modalBody.innerHTML = response;
                 },
                 error: function(xhr, status, error) {
                     console.error('[openMarActionsModal] AJAX error:', error);
-                    modalEl.querySelector('.modal-body').innerHTML = `
+                    modalBody.innerHTML = `
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-triangle"></i>
                             <strong><?php echo xlt('Error loading data'); ?>:</strong> ${error}
@@ -815,15 +838,74 @@ function reactivateAlarm(itemId) {
             });
         }
 
-        // Función para cerrar el modal principal
+        // ==========================================
+        // CERRAR MODAL PRINCIPAL (MEJORADO)
+        // ==========================================
+
         function closeMarModal() {
             const modalEl = document.getElementById('marActionsModal');
             if (modalEl) {
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
+                modalEl.style.display = 'none';
             }
+            
+            // Limpiar cualquier backdrop residual
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
+        }
+
+        // ==========================================
+        // FUNCIÓN: GUARDAR EVALUACIÓN DE REACCIONES
+        // ==========================================
+        function saveReactionsEvaluation() {
+            const form = document.getElementById('reactionsEffectivenessForm');
+            if (!form) {
+                console.error('[saveReactionsEvaluation] Form not found');
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            console.log('[saveReactionsEvaluation] Saving with data:', data);
+            
+            const btnSave = document.getElementById('btnSaveEvaluation');
+            if (btnSave) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <?php echo xlt("Saving..."); ?>';
+            }
+            
+            $.ajax({
+                url: 'save_reactions_effectiveness.php',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(response) {
+                    console.log('[saveReactionsEvaluation] Response:', response);
+                    if (response.success) {
+                        alert(response.message);
+                        closeMarModal();
+                        location.reload();
+                    } else {
+                        alert('<?php echo xlt("Error"); ?>: ' + response.message);
+                        if (btnSave) {
+                            btnSave.disabled = false;
+                            btnSave.innerHTML = '<i class="fas fa-save"></i> <?php echo xlt("Save Evaluation"); ?>';
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[saveReactionsEvaluation] AJAX Error:', error);
+                    console.error('[saveReactionsEvaluation] Response:', xhr.responseText);
+                    alert('<?php echo xlt("Error saving evaluation"); ?>: ' + error);
+                    if (btnSave) {
+                        btnSave.disabled = false;
+                        btnSave.innerHTML = '<i class="fas fa-save"></i> <?php echo xlt("Save Evaluation"); ?>';
+                    }
+                }
+            });
         }
 
         // ==========================================
@@ -832,7 +914,7 @@ function reactivateAlarm(itemId) {
         function confirmDose(supplyId) {
             console.log('[confirmDose] Opening confirmation for supply_id:', supplyId);
             
-            const marModalEl = document.getElementById('marActionsModal');
+            const modalBody = document.getElementById('marActionsModalBody');
             
             // Cargar formulario de confirmación en el mismo modal
             $.ajax({
@@ -841,8 +923,7 @@ function reactivateAlarm(itemId) {
                 data: { supply_id: supplyId },
                 success: function(response) {
                     console.log('[confirmDose] Form loaded');
-                    marModalEl.querySelector('.modal-body').innerHTML = response;
-                    marModalEl.querySelector('.modal-title').textContent = '<?php echo xlt("Confirm Dose"); ?>';
+                    modalBody.innerHTML = response;
                 },
                 error: function(xhr, status, error) {
                     console.error('[confirmDose] Error:', error);
@@ -851,16 +932,63 @@ function reactivateAlarm(itemId) {
             });
         }
 
+        // ==========================================
+        // FUNCIÓN: GUARDAR DOSIS CONFIRMADA (Global)
+        // ==========================================
+        function saveConfirmedDose(supplyId) {
+            console.log('[saveConfirmedDose] Starting for supply_id:', supplyId);
+            
+            const infusionDatetimeEl = document.getElementById('infusion_datetime');
+            const suppliedByEl = document.getElementById('supplied_by');
+            const doseNoteEl = document.getElementById('dose_note');
+            
+            if (!infusionDatetimeEl || !suppliedByEl) {
+                alert('<?php echo xlt("Form elements not found"); ?>');
+                return;
+            }
+            
+            const infusionDatetime = infusionDatetimeEl.value;
+            const suppliedBy = suppliedByEl.value;
+            const doseNote = doseNoteEl ? doseNoteEl.value : '';
+
+            if (!suppliedBy) {
+                alert('<?php echo xlt("Please select a user."); ?>');
+                return;
+            }
+            
+            if (!infusionDatetime) {
+                alert('<?php echo xlt("Please select date and time."); ?>');
+                return;
+            }
+
+            $.ajax({
+                url: 'save_confirmed_dose.php',
+                type: 'POST',
+                data: {
+                    supply_id: supplyId,
+                    infusion_datetime: infusionDatetime,
+                    supplied_by: suppliedBy,
+                    dose_note: doseNote
+                },
+                success: function(response) {
+                    console.log('[saveConfirmedDose] Success:', response);
+                    alert('<?php echo xlt("Dose confirmed successfully"); ?>');
+                    closeMarModal();
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error('[saveConfirmedDose] Error:', status, error);
+                    alert('<?php echo xlt("Error confirming dose"); ?>: ' + error);
+                }
+            });
+        }
+
         // Ajustar schedule (modal secundario)
         function adjustSchedule(scheduleId) {
             console.log('[adjustSchedule] Opening for schedule_id:', scheduleId);
             
-            // Ocultar modal principal
-            const marModalEl = document.getElementById('marActionsModal');
-            const marModalInstance = bootstrap.Modal.getInstance(marModalEl);
-            if (marModalInstance) {
-                marModalInstance.hide();
-            }
+            // Cerrar modal principal
+            closeMarModal();
             
             // Limpiar contenedor dinámico
             $('#dynamicModalContainer').empty();
@@ -901,12 +1029,8 @@ function reactivateAlarm(itemId) {
         function suspendSchedule(scheduleId) {
             console.log('[suspendSchedule] Opening for schedule_id:', scheduleId);
             
-            // Ocultar modal principal
-            const marModalEl = document.getElementById('marActionsModal');
-            const marModalInstance = bootstrap.Modal.getInstance(marModalEl);
-            if (marModalInstance) {
-                marModalInstance.hide();
-            }
+            // Cerrar modal principal
+            closeMarModal();
             
             // Limpiar contenedor dinámico
             $('#dynamicModalContainer').empty();
@@ -948,39 +1072,16 @@ function reactivateAlarm(itemId) {
         function viewDoseHistory(scheduleId) {
             console.log('[viewDoseHistory] Opening for schedule_id:', scheduleId);
             
+            const modalBody = document.getElementById('marActionsModalBody');
+            
+            // Cargar historial de dosis en el mismo modal
             $.ajax({
                 url: 'modal_dose_history.php',
                 method: 'GET',
                 data: { schedule_id: scheduleId },
                 success: function(response) {
-                    // Crear modal si no existe
-                    if (!$('#doseHistoryModal').length) {
-                        $('body').append(`
-                            <div class="modal fade" id="doseHistoryModal" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-info text-white">
-                                            <h5 class="modal-title">
-                                                <i class="fas fa-history"></i> <?php echo xlt("Dose History"); ?>
-                                            </h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body"></div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                <?php echo xlt("Close"); ?>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
-                    }
-                    
-                    // Actualizar contenido y mostrar
-                    $('#doseHistoryModal .modal-body').html(response);
-                    const historyModal = new bootstrap.Modal(document.getElementById('doseHistoryModal'));
-                    historyModal.show();
+                    console.log('[viewDoseHistory] History loaded');
+                    modalBody.innerHTML = response;
                 },
                 error: function(xhr, status, error) {
                     console.error('[viewDoseHistory] Error:', error);
@@ -995,6 +1096,9 @@ function reactivateAlarm(itemId) {
         function registerReactions(supplyId, scheduleId) {
             console.log('[registerReactions] Opening for supply_id:', supplyId, 'schedule_id:', scheduleId);
             
+            const modalBody = document.getElementById('marActionsModalBody');
+            
+            // Cargar formulario de reacciones en el mismo modal
             $.ajax({
                 url: 'modal_reactions_effectiveness.php',
                 method: 'GET',
@@ -1003,29 +1107,8 @@ function reactivateAlarm(itemId) {
                     schedule_id: scheduleId
                 },
                 success: function(response) {
-                    // Crear modal si no existe
-                    if (!$('#reactionsModal').length) {
-                        $('body').append(`
-                            <div class="modal fade" id="reactionsModal" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-warning">
-                                            <h5 class="modal-title">
-                                                <i class="fas fa-exclamation-triangle"></i> <?php echo xlt("Register Reactions & Effectiveness"); ?>
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
-                    }
-                    
-                    // Actualizar contenido y mostrar
-                    $('#reactionsModal .modal-body').html(response);
-                    const reactionsModal = new bootstrap.Modal(document.getElementById('reactionsModal'));
-                    reactionsModal.show();
+                    console.log('[registerReactions] Form loaded');
+                    modalBody.innerHTML = response;
                 },
                 error: function(xhr, status, error) {
                     console.error('[registerReactions] Error:', error);
@@ -1034,11 +1117,14 @@ function reactivateAlarm(itemId) {
             });
         }
 
-        // Usar 'select' en lugar de 'click' para mejor compatibilidad con Vis.js
+        // ==========================================
+        // EVENT HANDLER DEL TIMELINE (MEJORADO)
+        // ==========================================
+
         timeline.on('select', function (properties) {
             console.log('[timeline select] Event triggered:', properties);
             
-            var itemId = properties.items[0]; // En 'select', los items están en un array
+            var itemId = properties.items[0];
             
             if (!itemId) {
                 console.log('No item selected');
@@ -1046,6 +1132,9 @@ function reactivateAlarm(itemId) {
             }
             
             console.log('Selected item:', itemId);
+            
+            // Deseleccionar inmediatamente para permitir re-clicks
+            timeline.setSelection([]);
             
             // CASO 1: Click en ALARMA
             if (itemId.startsWith('alarm_')) {
@@ -1060,21 +1149,18 @@ function reactivateAlarm(itemId) {
 
                 if (supplyId && scheduleId) {
                     console.log('Opening modal for dose:', supplyId, scheduleId);
-                    // Pequeña pausa para asegurar que Vis.js libere el foco
+                    
+                    // Pequeño delay para que Vis.js libere el foco completamente
                     setTimeout(function() {
                         openMarActionsModal(supplyId, scheduleId);
-                    }, 50);
+                    }, 100);
                 } else {
                     console.error("Error: supplyId o scheduleId no están definidos.");
                 }
             }
-            // CASO 3: Otros items
             else {
                 console.log('Unknown item type:', itemId);
             }
-            
-            // Deseleccionar el item para permitir volver a hacer clic
-            timeline.setSelection([]);
         });
 
         $(document).ready(function () {
@@ -1245,19 +1331,17 @@ function reactivateAlarm(itemId) {
 
     </script>
 
-    <!-- Modal principal de dosis -->
-    <div class="modal fade" id="marActionsModal" tabindex="-1" aria-labelledby="marActionsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="marActionsModalLabel">
-                        <i class="fas fa-pills"></i> <?php echo xlt("Dose Administration"); ?>
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?php echo xlt('Close'); ?>"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Contenido cargado vía AJAX -->
-                </div>
+    <!-- Modal principal de dosis - Custom implementation to avoid Bootstrap conflicts -->
+    <div id="marActionsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 99999; overflow-y: auto;">
+        <div style="position: relative; margin: 50px auto; max-width: 800px; width: 90%; background: white; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+            <div style="padding: 15px 20px; background: #0d6efd; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <h5 style="margin: 0; font-size: 1.25rem;">
+                    <i class="fas fa-pills"></i> <?php echo xlt("Dose Administration"); ?>
+                </h5>
+                <button type="button" onclick="closeMarModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; line-height: 30px;">&times;</button>
+            </div>
+            <div id="marActionsModalBody" style="padding: 20px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                <!-- Contenido cargado vía AJAX -->
             </div>
         </div>
     </div>

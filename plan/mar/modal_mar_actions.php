@@ -132,7 +132,7 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
         </div>
         </div>
         <div class="d-flex justify-content-end mt-3 pt-3 border-top">
-                <button type="button" class="btn btn-outline-secondary" onclick="closeMarModal()">
+                <button type="button" class="btn btn-outline-secondary" onclick="if(typeof closeMarModal === 'function') { closeMarModal(); } else { document.getElementById('marActionsModal').style.display='none'; }">
                     <?php echo xlt("Close"); ?>
                 </button>
         </div>

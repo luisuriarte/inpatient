@@ -66,7 +66,7 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
             </div>
         </div>
 
-        <form id="reactionsEffectivenessForm" method="POST" action="save_reactions_effectiveness.php">
+        <form id="reactionsEffectivenessForm" onsubmit="return false;">
             <input type="hidden" name="supply_id" value="<?php echo attr($supply_id); ?>">
             <input type="hidden" name="schedule_id" value="<?php echo attr($schedule_id); ?>">
             
@@ -161,14 +161,14 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
 
             <!-- Form Actions -->
             <div class="d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeMarModal()">
                     <i class="fas fa-times"></i> <?php echo xlt("Cancel"); ?>
                 </button>
                 <div>
-                    <button type="reset" class="btn btn-outline-warning me-2">
+                    <button type="button" class="btn btn-outline-warning me-2" onclick="document.getElementById('reactionsEffectivenessForm').reset();">
                         <i class="fas fa-undo"></i> <?php echo xlt("Reset"); ?>
                     </button>
-                    <button type="submit" class="btn btn-success">
+                    <button type="button" class="btn btn-success" id="btnSaveEvaluation" onclick="saveReactionsEvaluation()">
                         <i class="fas fa-save"></i> <?php echo xlt("Save Evaluation"); ?>
                     </button>
                 </div>
@@ -177,72 +177,6 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
     </div>
 
     <script>
-    $(document).ready(function() {
-        $('#reactionsEffectivenessForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            $.ajax({
-                url: 'save_reactions_effectiveness.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                beforeSend: function() {
-                    // Mostrar loading
-                    $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> <?php echo xlt("Saving..."); ?>');
-                },
-                success: function(response) {
-                    console.log('Response:', response);
-                    if (response.success) {
-                        // Mostrar éxito
-                        showAlert('success', response.message);
-                        
-                        // Cerrar modal después de un breve retraso
-                        setTimeout(function() {
-                            // Cerrar el modal de reacciones
-                            $('#reactionsModal').modal('hide');
-                            
-                            // Forzar la eliminación del backdrop si queda alguno
-                            setTimeout(function() {
-                                $('.modal-backdrop').remove();
-                                $('body').removeClass('modal-open');
-                                $('body').css('overflow', 'auto');
-                            }, 200);
-                        }, 1500);
-                    } else {
-                        showAlert('danger', response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    console.error('Response Text:', xhr.responseText);
-                    showAlert('danger', 'Error saving evaluation. Please try again. (' + error + ')');
-                },
-                complete: function() {
-                    // Restaurar botón
-                    $('button[type="submit"]').prop('disabled', false).html('<i class="fas fa-save"></i> <?php echo xlt("Save Evaluation"); ?>');
-                }
-            });
-        });
-        
-        // Función para mostrar alertas dentro del modal
-        function showAlert(type, message) {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            
-            // Insertar alerta al principio del modal
-            $('.container-fluid').prepend(alertHtml);
-            
-            // Auto-eliminar después de 5 segundos
-            setTimeout(function() {
-                $('.alert').fadeOut();
-            }, 5000);
-        }
-    });
-    
     // Función para agregar tipo de reacción al campo de descripción
     function addReactionTypeToDescription() {
         const selectedType = $('#reaction_type').val();

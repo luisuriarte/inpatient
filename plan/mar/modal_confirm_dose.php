@@ -51,37 +51,5 @@ $infusion_datetime = date('Y-m-d\TH:i'); // Formato ISO para el input de fecha y
 
 <div class="d-flex justify-content-between mt-3 pt-3 border-top">
     <button type="button" class="btn btn-primary" onclick="saveConfirmedDose(<?php echo attr($supply_id); ?>)"><?php echo xlt("Save"); ?></button>
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo xlt("Cancel"); ?></button>
+    <button type="button" class="btn btn-secondary" onclick="closeMarModal()"><?php echo xlt("Cancel"); ?></button>
 </div>
-
-<script>
-function saveConfirmedDose(supplyId) {
-    const infusionDatetime = document.getElementById('infusion_datetime').value;
-    const suppliedBy = document.getElementById('supplied_by').value;
-    const doseNote = document.getElementById('dose_note').value;
-
-    if (!suppliedBy) {
-        alert('<?php echo xlt("Please select a user."); ?>');
-        return;
-    }
-
-    $.ajax({
-        url: 'save_confirmed_dose.php',
-        type: 'POST',
-        data: {
-            supply_id: supplyId,
-            infusion_datetime: infusionDatetime,
-            supplied_by: suppliedBy,
-            dose_note: doseNote
-        },
-        success: function(response) {
-            alert('<?php echo xlt("Dose confirmed successfully"); ?>');
-            closeMarModal();
-            location.reload();
-        },
-        error: function() {
-            alert('<?php echo xlt("Error confirming dose"); ?>');
-        }
-    });
-}
-</script>

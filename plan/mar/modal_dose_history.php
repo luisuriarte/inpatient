@@ -25,18 +25,47 @@ $history_query = "
 ";
 
 $result = sqlStatement($history_query, [$schedule_id]);
+
+// Contar estadísticas en PHP
+$total_doses = 0;
+$confirmed_count = 0;
+$pending_count = 0;
+$effectiveness_count = 0;
+$reactions_count = 0;
+
+$result_count = sqlStatement($history_query, [$schedule_id]);
+while ($count_row = sqlFetchArray($result_count)) {
+    $total_doses++;
+    
+    if ($count_row['status'] === 'Confirmed') {
+        $confirmed_count++;
+    } elseif ($count_row['status'] === 'Pending') {
+        $pending_count++;
+    }
+    
+    if (!empty($count_row['effectiveness_score'])) {
+        $effectiveness_count++;
+    }
+    
+    // Contar reacciones solo si no es "No Reaction"
+    if (!empty($count_row['reaction_description']) && 
+        strtolower($count_row['reaction_description']) !== 'no reaction' && 
+        strtolower($count_row['reaction_description']) !== 'nothing') {
+        $reactions_count++;
+    }
+}
 ?>
 
 <div class="modal-header">
     <h5 class="modal-title">
         <i class="fas fa-history"></i> <?php echo xlt('Dose Administration History'); ?>
     </h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo xlt('Close'); ?>"></button>
+    <button type="button" class="btn-close" onclick="closeMarModal()" aria-label="<?php echo xlt('Close'); ?>"></button>
 </div>
 <div class="modal-body">
     <?php if (sqlNumRows($result) > 0): ?>
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover" id="doseHistoryTable">
                 <thead class="table-dark">
                     <tr>
                         <th><?php echo xlt('Dose #'); ?></th>
@@ -129,35 +158,6 @@ $result = sqlStatement($history_query, [$schedule_id]);
         </div>
         
         <!-- Estadísticas resumidas -->
-        <?php
-        // Resetear contadores
-        $total_doses = 0;
-        $confirmed_count = 0;
-        $effectiveness_count = 0;
-        $reactions_count = 0;
-        
-        // Volver a recorrer para contar
-        $result_count = sqlStatement($history_query, [$schedule_id]);
-        while ($count_row = sqlFetchArray($result_count)) {
-            $total_doses++;
-            
-            if ($count_row['status'] === 'Confirmed') {
-                $confirmed_count++;
-            }
-            
-            if (!empty($count_row['effectiveness_score'])) {
-                $effectiveness_count++;
-            }
-            
-            // Contar reacciones solo si no es "No Reaction"
-            if (!empty($count_row['reaction_description']) && 
-                strtolower($count_row['reaction_description']) !== 'no reaction' && 
-                strtolower($count_row['reaction_description']) !== 'nothing') {
-                $reactions_count++;
-            }
-        }
-        ?>
-        
         <div class="row mt-3">
             <div class="col-md-3">
                 <div class="card bg-light">
@@ -178,35 +178,8 @@ $result = sqlStatement($history_query, [$schedule_id]);
             <div class="col-md-3">
                 <div class="card bg-light">
                     <div class="card-body text-center">
-                        <h6 class="card-title"><?php echo xlt('Effectiveness'); ?></h6>
-                        <h4 class="text-info"><?php echo $effectiveness_count; ?></h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h6 class="card-title"><?php echo xlt('Reactions'); ?></h6>
-                        <h4 class="text-warning"><?php echo $reactions_count; ?></h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h6 class="card-title"><?php echo xlt('Confirmed'); ?></h6>
-                        <h4 class="text-success" id="confirmed-count">0</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
                         <h6 class="card-title"><?php echo xlt('Pending'); ?></h6>
-                        <h4 class="text-warning" id="pending-count">0</h4>
+                        <h4 class="text-warning"><?php echo $pending_count; ?></h4>
                     </div>
                 </div>
             </div>
@@ -214,7 +187,7 @@ $result = sqlStatement($history_query, [$schedule_id]);
                 <div class="card bg-light">
                     <div class="card-body text-center">
                         <h6 class="card-title"><?php echo xlt('With Reactions'); ?></h6>
-                        <h4 class="text-danger" id="reactions-count">0</h4>
+                        <h4 class="text-danger"><?php echo $reactions_count; ?></h4>
                     </div>
                 </div>
             </div>
@@ -227,47 +200,7 @@ $result = sqlStatement($history_query, [$schedule_id]);
     <?php endif; ?>
 </div>
 <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+    <button type="button" class="btn btn-secondary" onclick="closeMarModal()">
         <i class="fas fa-times"></i> <?php echo xlt('Close'); ?>
     </button>
 </div>
-
-<script>
-// Contar estadísticas
-$(document).ready(function() {
-    let confirmedCount = 0;
-    let pendingCount = 0;
-    let reactionsCount = 0;
-    
-    console.log('Iniciando conteo de dosis...');
-    
-    $('table tbody tr').each(function() {
-        const statusBadge = $(this).find('td:eq(3) span.badge');
-        const hasReaction = $(this).find('td:eq(6)').find('.badge').length > 0;
-        
-        // Solo usar una condición para evitar conteo duplicado
-        if (statusBadge.hasClass('bg-success')) {
-            confirmedCount++;
-            console.log('Encontrada dosis confirmada:', statusBadge.text());
-        }
-        if (statusBadge.hasClass('bg-warning')) {
-            pendingCount++;
-            console.log('Encontrada dosis pendiente:', statusBadge.text());
-        }
-        if (hasReaction) {
-            reactionsCount++;
-            console.log('Encontrada dosis con reacciones');
-        }
-    });
-    
-    console.log('Totales:', {
-        confirmed: confirmedCount,
-        pending: pendingCount,
-        reactions: reactionsCount
-    });
-    
-    $('#confirmed-count').text(confirmedCount);
-    $('#pending-count').text(pendingCount);
-    $('#reactions-count').text(reactionsCount);
-});
-</script>

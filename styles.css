@@ -1058,3 +1058,36 @@ body {
     opacity: 0.8;
     border-width: 3px;
 }
+
+/* ==========================================
+   FIX PARA BACKDROP DUPLICADO
+   ========================================== */
+
+/* Asegurar que solo haya un backdrop visible */
+.modal-backdrop.show ~ .modal-backdrop {
+    display: none !important;
+}
+
+/* Z-index correcto para modales sobre Vis.js */
+.modal-backdrop {
+    z-index: 9998 !important;
+}
+
+.modal {
+    z-index: 9999 !important;
+}
+
+/* Modales secundarios van aún más arriba */
+#dynamicModalContainer .modal {
+    z-index: 10001 !important;
+}
+
+#dynamicModalContainer .modal-backdrop {
+    z-index: 10000 !important;
+}
+
+/* Asegurar que el body no se quede con overflow hidden */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
