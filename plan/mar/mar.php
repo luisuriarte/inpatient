@@ -851,13 +851,11 @@ function reactivateAlarm(itemId) {
             });
         }
 
-        // ==========================================
-        // FUNCIÓN: AJUSTAR SCHEDULE
-        // ==========================================
+        // Ajustar schedule (modal secundario)
         function adjustSchedule(scheduleId) {
             console.log('[adjustSchedule] Opening for schedule_id:', scheduleId);
             
-            // Ocultar modal principal (sin destruir)
+            // Ocultar modal principal
             const marModalEl = document.getElementById('marActionsModal');
             const marModalInstance = bootstrap.Modal.getInstance(marModalEl);
             if (marModalInstance) {
@@ -866,8 +864,9 @@ function reactivateAlarm(itemId) {
             
             // Limpiar contenedor dinámico
             $('#dynamicModalContainer').empty();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
             
-            // Cargar modal de edición
             $.ajax({
                 url: 'modal_order_edit.php',
                 type: 'GET',
@@ -882,17 +881,13 @@ function reactivateAlarm(itemId) {
                             keyboard: true
                         });
                         
-                        // Limpiar al cerrar
                         editModalEl.addEventListener('hidden.bs.modal', function() {
                             $('#dynamicModalContainer').empty();
-                            
-                            // Opcional: reabrir modal principal
-                            // if (marModalInstance) marModalInstance.show();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('overflow', '');
                         }, { once: true });
                         
                         editModal.show();
-                    } else {
-                        console.error('[adjustSchedule] editScheduleModal not found in response');
                     }
                 },
                 error: function(xhr, status, error) {
@@ -902,9 +897,7 @@ function reactivateAlarm(itemId) {
             });
         }
 
-        // ==========================================
-        // FUNCIÓN: SUSPENDER SCHEDULE
-        // ==========================================
+        // Suspender schedule (modal secundario)
         function suspendSchedule(scheduleId) {
             console.log('[suspendSchedule] Opening for schedule_id:', scheduleId);
             
@@ -917,8 +910,9 @@ function reactivateAlarm(itemId) {
             
             // Limpiar contenedor dinámico
             $('#dynamicModalContainer').empty();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
             
-            // Cargar modal de suspensión
             $.ajax({
                 url: 'modal_order_suspend.php',
                 type: 'GET',
@@ -933,14 +927,13 @@ function reactivateAlarm(itemId) {
                             keyboard: true
                         });
                         
-                        // Limpiar al cerrar
                         suspendModalEl.addEventListener('hidden.bs.modal', function() {
                             $('#dynamicModalContainer').empty();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('overflow', '');
                         }, { once: true });
                         
                         suspendModal.show();
-                    } else {
-                        console.error('[suspendSchedule] suspendScheduleModal not found in response');
                     }
                 },
                 error: function(xhr, status, error) {
@@ -949,7 +942,6 @@ function reactivateAlarm(itemId) {
                 }
             });
         }
-
         // ==========================================
         // FUNCIÓN: VER HISTORIAL DE DOSIS
         // ==========================================
