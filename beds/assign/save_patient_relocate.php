@@ -8,32 +8,28 @@ require_once("../../../interface/globals.php");
 $bedsPatientsId = intval($_POST['beds_patients_id']);
 $patientId = intval($_POST['patient_id']);
 
-// Datos de ORIGEN
-$fromBedId = intval($_POST['from_bed_id']);
-$fromBedName = htmlspecialchars($_POST['from_bed_name']);
-$fromRoomId = intval($_POST['from_room_id']);
-$fromRoomName = htmlspecialchars($_POST['from_room_name'] ?? '');
-$fromUnitId = intval($_POST['from_unit_id']);
-$fromUnitName = htmlspecialchars($_POST['from_unit_name'] ?? '');
-$fromFacilityId = intval($_POST['from_facility_id']);
-$fromFacilityName = htmlspecialchars($_POST['from_facility_name'] ?? '');
+// Datos de ORIGEN (provenientes del formulario)
+$fromIdBedsPatients = intval($_POST['from_id_beds_patients']);
+// Nota: No usaremos $fromBedId, $fromRoomId, $fromUnitId, $fromFacilityId del formulario, 
+// los obtendremos de la base de datos
 
-// Datos de DESTINO
-$toBedId = intval($_POST['to_bed_id']);
-$toBedName = htmlspecialchars($_POST['to_bed_name']);
-$toBedStatus = htmlspecialchars($_POST['to_bed_status']);
-$toBedType = htmlspecialchars($_POST['to_bed_type']);
-$toRoomId = intval($_POST['to_room_id']);
-$toRoomName = htmlspecialchars($_POST['to_room_name']);
-$toUnitId = intval($_POST['to_unit_id']);
-$toUnitName = htmlspecialchars($_POST['to_unit_name']);
-$toFacilityId = intval($_POST['to_facility_id']);
-$toFacilityName = htmlspecialchars($_POST['to_facility_name']);
+// Datos de DESTINO (la cama a la que se va a reubicar)
+$bedId = intval($_POST['bed_id']); // El ID de la cama destino
+$toBedName = htmlspecialchars($_POST['bed_name']);
+$toBedStatus = htmlspecialchars($_POST['bed_status']);
+$toBedType = htmlspecialchars($_POST['bed_type']);
+$toRoomId = intval($_POST['room_id']);
+$toRoomName = htmlspecialchars($_POST['room_name']);
+$toUnitId = intval($_POST['unit_id']);
+$toUnitName = htmlspecialchars($_POST['unit_name']);
+$toFacilityId = intval($_POST['facility_id']);
+$toFacilityName = htmlspecialchars($_POST['facility_name']);
 
 // Otros datos
-$responsibleUserId = empty($_POST['responsible_user_id']) ? null : intval($_POST['responsible_user_id']);
-$reason = text($_POST['reason']);
-$notes = text($_POST['notes']);
+$responsibleUserId = empty($_POST['responsible_user_id_relocate']) ? null : intval($_POST['responsible_user_id_relocate']);
+$reason = text($_POST['relocate_reason']);
+$notes = text($_POST['relocateNotes']);
+$bedToCleaning = isset($_POST['bed_to_cleaning']) ? true : false;
 
 // Usuario y timestamps
 $userId = $_SESSION['authUserID'];
@@ -45,12 +41,31 @@ $bedAction = htmlspecialchars($_POST['bed_action'] ?? 'Management');
 // ==========================================
 // OBTENER INFORMACIÓN DE LA CAMA ORIGEN
 // ==========================================
-$fromBedQuery = "SELECT bed_status, bed_type FROM beds WHERE id = ?";
+// Obtenemos la información completa de la cama actual del paciente desde beds_patients
+$currentBedQuery = "SELECT current_bed_id, current_room_id, current_unit_id, facility_id FROM beds_patients WHERE id = ?";
+$currentBedData = sqlQuery($currentBedQuery, [$fromIdBedsPatients]);
+
+if (!$currentBedData) {
+    die("Error: No se pudo obtener información de la cama origen.");
+}
+
+$fromBedId = $currentBedData['current_bed_id'];
+$fromRoomId = $currentBedData['current_room_id'];
+$fromUnitId = $currentBedData['current_unit_id'];
+$fromFacilityId = $currentBedData['facility_id'];
+
+// Ahora obtenemos el nombre de la cama de origen
+$fromBedQuery = "SELECT bed_name FROM beds WHERE id = ?";
 $fromBedData = sqlQuery($fromBedQuery, [$fromBedId]);
 
 if (!$fromBedData) {
-    die("Error: No se pudo obtener información de la cama origen.");
+    die("Error: No se pudo obtener el nombre de la cama origen.");
 }
+
+$fromBedName = $fromBedData['bed_name'];
+
+// Para la actualización, usaremos el ID del registro de la cama de origen
+$bedsPatientsId = $fromIdBedsPatients;
 
 // ==========================================
 // INICIAR TRANSACCIÓN
@@ -61,7 +76,7 @@ try {
     // ==========================================
     // 1. ACTUALIZAR BEDS_PATIENTS CON NUEVA UBICACIÓN
     // ==========================================
-    $updateQuery = "UPDATE beds_patients 
+    $updateQuery = "UPDATE beds_patients
                    SET current_bed_id = ?,
                        current_room_id = ?,
                        current_unit_id = ?,
@@ -69,9 +84,9 @@ try {
                        user_modif = ?,
                        datetime_modif = ?
                    WHERE id = ?";
-    
+
     sqlStatement($updateQuery, [
-        $toBedId, $toRoomId, $toUnitId, $responsibleUserId,
+        $bedId, $toRoomId, $toUnitId, $responsibleUserId,
         $userFullName, $datetimeModif, $bedsPatientsId
     ]);
     
@@ -81,36 +96,39 @@ try {
     $trackerQuery = "INSERT INTO beds_patients_tracker (
         uuid, beds_patients_id, patient_id, movement_type, movement_date,
         responsible_user_id,
-        bed_id_from, room_id_from, unit_id_from, facility_id_from, 
-        bed_name_from, bed_status_from, bed_type_from, bed_condition_from,
+        bed_id_from, room_id_from, unit_id_from, facility_id_from,
+        bed_condition_from,
         bed_id_to, room_id_to, unit_id_to, facility_id_to,
-        bed_name_to, bed_status_to, bed_type_to, bed_condition_to,
+        bed_condition_to,
         reason, notes, user_modif, datetime_modif
     ) VALUES (
         UUID(), ?, ?, 'relocation', ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, 'occupied',
-        ?, ?, ?, ?, ?, ?, ?, 'occupied',
+        ?, ?, ?, ?, 'occupied',
+        ?, ?, ?, ?, 'occupied',
         ?, ?, ?, ?
     )";
-    
+
     sqlStatement($trackerQuery, [
         $bedsPatientsId, $patientId, $datetimeModif, $responsibleUserId,
         $fromBedId, $fromRoomId, $fromUnitId, $fromFacilityId,
-        $fromBedName, $fromBedData['bed_status'], $fromBedData['bed_type'],
-        $toBedId, $toRoomId, $toUnitId, $toFacilityId,
-        $toBedName, $toBedStatus, $toBedType,
+        $bedId, $toRoomId, $toUnitId, $toFacilityId,
         $reason, $notes, $userFullName, $datetimeModif
     ]);
-    
+
     // ==========================================
     // 3. ACTUALIZAR ESTADO DE CAMAS EN BEDS_STATUS_LOG
     // ==========================================
-    // Liberar cama anterior (normalmente va a limpieza)
-    insertBedStatusLog($fromBedId, 'cleaning', $userId, null, 
-                      'Bed freed after patient relocation');
-    
+    // Determinar el estado para la cama anterior según la elección del usuario
+    $previousBedStatus = $bedToCleaning ? 'cleaning' : 'vacant';
+    $previousBedNote = $bedToCleaning ? 
+                      'Bed freed after patient relocation - Set to cleaning' : 
+                      'Bed freed after patient relocation - Set to vacant';
+
+    // Actualizar estado de la cama anterior
+    insertBedStatusLog($fromBedId, $previousBedStatus, $userId, null, $previousBedNote);
+
     // Ocupar nueva cama
-    insertBedStatusLog($toBedId, 'occupied', $userId, $bedsPatientsId, 
+    insertBedStatusLog($bedId, 'occupied', $userId, $bedsPatientsId,
                       'Bed occupied after patient relocation - Reason: ' . $reason);
     
     // ==========================================

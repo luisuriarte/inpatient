@@ -25,7 +25,6 @@ $size = $_POST['size'];
 $unit = $_POST['unit'];
 $form = $_POST['form'];
 $route = $_POST['route'];
-$route_option_id = $_POST['route_option_id'] ?? null;
 $note = $_POST['note'];
 $uuid = generateUUID();
 $uuid_lists = generateUUID();
@@ -79,8 +78,8 @@ try {
     // Insertar la orden en la tabla prescriptions
     $prescription_query = "INSERT INTO prescriptions 
                         (uuid, patient_id, provider_id, drug, dosage, quantity, size, unit, form, route, start_date, note, 
-                            active, date_added, date_modified, created_by, updated_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)";
+                            active, date_added, date_modified, created_by, updated_by, usage_category, usage_category_title)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, 'inpatient', 'Inpatient')";
 
     $prescription_id = sqlInsert($prescription_query,
         array(
@@ -93,7 +92,7 @@ try {
             $size, 
             $unit, 
             $form, 
-            $route_option_id,
+            $route,
             $start_date_formatted, 
             $note, 
             $active, 

@@ -70,15 +70,24 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
                         <label class="form-label"><?= xlt('Operator'); ?>:</label>
                         <span class="form-text"><?= htmlspecialchars($userFullName); ?></span>
                     </div>
+                    
+                    <!-- Switch para indicar si la cama origen va a limpieza o directamente a vacante -->
+                    <div class="mb-3">
+                        <div class="custom-slider-switch">
+                            <input type="checkbox" id="bedToCleaningSwitch<?= $bedPatient['id'] ?>" name="bed_to_cleaning" checked>
+                            <label for="bedToCleaningSwitch<?= $bedPatient['id'] ?>"><?= xlt('Set origin bed to cleaning'); ?></label>
+                        </div>
+                        <small class="form-text text-muted"><?= xlt('If checked, the origin bed will be set to cleaning. If unchecked, it will be set to vacant.'); ?></small>
+                    </div>
                 </div>
             </form>
             <div class="modal-footer">
                     <!-- Botón de Reserva -->
-                    <button type="button" class="btn btn-primary" 
-                            onclick="isResponsiblePersonSelected(
-                                'responsibleRelocate<?= $bedPatient['id'] ?>', // ID del input de usuario responsable
-                                'responsibleAlertModal<?= $bedPatient['id'] ?>', // ID del modal de alerta
-                                'relocateForm<?= $bedPatient['id'] ?>' // ID del formulario de descarga
+                    <button type="submit" form="relocateForm<?= $bedPatient['id'] ?>" class="btn btn-primary"
+                            onclick="return validateRelocateForm(
+                                'relocateForm<?= $bedPatient['id'] ?>', 
+                                'responsibleRelocate<?= $bedPatient['id'] ?>', 
+                                'responsibleAlertModal<?= $bedPatient['id'] ?>'
                             )">
                         <?= xlt('Relocate') ?>
                     </button>
@@ -96,11 +105,24 @@ $relocateReason = sqlStatement("SELECT title FROM list_options WHERE list_id = '
     $(document).ready(function() {
         // Llamada a la función setupAutocomplete para el autocompletado
         setupAutocomplete(
-            'autocompleteRelocate<?= $bedPatient['id'] ?>', 
-            'relocateBedPatientModal<?= $bedPatient['id'] ?>', 
+            'autocompleteRelocate<?= $bedPatient['id'] ?>',
+            'relocateBedPatientModal<?= $bedPatient['id'] ?>',
             'responsibleRelocate<?= $bedPatient['id'] ?>',
             '../../search_users.php'
         );
     });
+    
+    function validateRelocateForm(formId, inputId, modalId) {
+        var responsibleUser = $('#' + inputId).val();
+
+        if (!responsibleUser) {
+            $('#' + modalId).modal('show').on('shown.bs.modal', function () {
+                $(this).css('z-index', '1061');
+            });
+            return false; // No enviar el formulario
+        } else {
+            return true; // Permitir que el formulario se envíe
+        }
+    }
 </script>
 

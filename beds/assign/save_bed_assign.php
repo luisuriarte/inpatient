@@ -54,9 +54,10 @@ try {
     // VERIFICAR SI EXISTE INTERNACIÓN ACTIVA
     // ==========================================
     $existingAdmissionQuery = "SELECT id, status, current_bed_id, admission_type
-                                FROM beds_patients 
-                                WHERE patient_id = ? 
+                                FROM beds_patients
+                                WHERE patient_id = ?
                                 AND status IN ('preadmitted', 'admitted')
+                                ORDER BY admission_date DESC
                                 LIMIT 1";
     $existingAdmission = sqlQuery($existingAdmissionQuery, [$patientId]);
     
@@ -67,9 +68,9 @@ try {
         if ($existingAdmission['status'] === 'preadmitted') {
             $newBedsPatientsId = $existingAdmission['id'];
             $oldBedId = $existingAdmission['current_bed_id'];
-            
+
             // Actualizar el registro existente a admitted
-            $updateQuery = "UPDATE beds_patients 
+            $updateQuery = "UPDATE beds_patients
                            SET status = 'admitted',
                                admission_type = 'check_in',
                                admission_date = ?,
@@ -88,7 +89,7 @@ try {
                                user_modif = ?,
                                datetime_modif = ?
                            WHERE id = ?";
-            
+
             sqlStatement($updateQuery, [
                 $datetimeModif, // Nueva fecha de admisión
                 $bedId, $roomId, $unitId, $responsibleUserId,
@@ -97,12 +98,12 @@ try {
                 $otherRestrictions, $notes, $userFullName, $datetimeModif,
                 $newBedsPatientsId
             ]);
-            
+
             $movementType = 'admission';
-            
+
             // Si cambió de cama respecto a la pre-admisión, liberar la anterior
             if ($oldBedId && $oldBedId != $bedId) {
-                insertBedStatusLog($oldBedId, 'vacant', $userId, null, 
+                insertBedStatusLog($oldBedId, 'vacant', $userId, null,
                                   'Bed released - patient moved from preadmission to different bed');
             }
             

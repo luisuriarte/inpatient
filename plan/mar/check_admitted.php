@@ -7,8 +7,7 @@ function isPatientAdmitted($pid) {
         SELECT COUNT(*) as admitted
         FROM beds_patients bp
         WHERE bp.patient_id = ?
-        AND bp.condition = 'occupied'
-        AND bp.active = 1
+        AND bp.status = 'admitted'
     ";
     $result = sqlQuery($sql, [$pid]);
     return $result['admitted'] > 0;

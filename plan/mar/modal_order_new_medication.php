@@ -2,10 +2,10 @@
 $sql_query = "SELECT CONCAT(f.name, ' - ', u.unit_name, ' - ', r.room_name, ' - ', b.bed_name) AS patient_location 
 	FROM beds_patients AS bp
 	INNER JOIN facility AS f ON bp.facility_id = f.id
-	INNER JOIN units AS u ON bp.unit_id = u.id
-	INNER JOIN rooms AS r ON bp.room_id = r.id
-	INNER JOIN beds AS b ON bp.bed_id = b.id
-WHERE bp.patient_id = ? AND bp.`active` = 1;";
+	INNER JOIN units AS u ON bp.current_unit_id = u.id
+	INNER JOIN rooms AS r ON bp.current_room_id = r.id
+	INNER JOIN beds AS b ON bp.current_bed_id = b.id
+WHERE bp.patient_id = ? AND bp.status = 'admitted';";
 $result = sqlStatement($sql_query, array($patient_id));
 $row = sqlFetchArray($result);
 
@@ -133,12 +133,11 @@ $row = sqlFetchArray($result);
                                     $route_query = "SELECT title, option_id FROM list_options WHERE list_id = 'drug_route'";
                                     $route_result = sqlStatement($route_query);
                                     while ($route = sqlFetchArray($route_result)) {
-                                        echo '<option value="' . attr($route['title']) . '" data-option-id="' . attr($route['option_id']) . '">'
+                                        echo '<option value="' . attr($route['option_id']) . '">'
                                             . text($route['title']) . '</option>';
                                     }
                                     ?>
                                 </select>
-                                <input type="hidden" id="route_option_id" name="route_option_id">
                                 </div>
                             </div>
                         </div>

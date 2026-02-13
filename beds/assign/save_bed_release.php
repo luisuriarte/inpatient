@@ -125,14 +125,4 @@ try {
     exit();
 }
 
-function insertBedStatusLog($bedId, $condition, $userId, $relatedBedsPatientsId = null, $notes = null) {
-    $query = "INSERT INTO beds_status_log (
-        bed_id, `condition`, changed_date, changed_by_user_id, 
-        related_beds_patients_id, notes
-    ) VALUES (?, ?, NOW(), ?, ?, ?)";
-    
-    return sqlStatement($query, [
-        $bedId, $condition, $userId, $relatedBedsPatientsId, $notes
-    ]);
-}
 ?>

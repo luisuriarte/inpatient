@@ -74,19 +74,19 @@ $rooms = [];
 if ($patientData['id']) {
     switch ($bedAction) {
         case 'Assign':
-            $bedActionTitle = xlt('Assign Bed to Patient');
+            $bedActionTitle = xlt('Patient Admission / Bed Assignment');
             $backgroundPatientCard = '#c2f9bc';
-            $modeText = 'Operations Mode';
+            $modeText = xlt('Patient Operations Mode');
             break;
         case 'Relocation':
-            $bedActionTitle = xlt('Relocate Patient');
+            $bedActionTitle = xlt('Patient Transfer / Bed Relocation');
             $backgroundPatientCard = '#f9e0bc';
-            $modeText = 'Relocation Mode';
+            $modeText = xlt('Patient Operations Mode');
             break;
         case 'Management':
-            $bedActionTitle = xlt('Patient Check-Out / Relocate');
+            $bedActionTitle = xlt('Patient Discharge / Bed Release');
             $backgroundPatientCard = '#e3f2fd'; // Azul claro para gestión
-            $modeText = 'Management Mode';
+            $modeText = xlt('Patient Operations Mode');
             break;
         default:
             $bedActionTitle = xlt('Manage Bed Assignments');
@@ -94,9 +94,16 @@ if ($patientData['id']) {
             $modeText = '';
     }
 } else {
-    $bedActionTitle = xlt('Manage Bed Assignments');
-    $backgroundPatientCard = null;
-    $modeText = '';
+    // Modo de operaciones de cama
+    if ($bedAction === 'BedManagement') {
+        $bedActionTitle = xlt('Bed Operations');
+        $backgroundPatientCard = '#fff3e0'; // Naranja claro para operaciones de cama
+        $modeText = xlt('Bed Operations Mode');
+    } else {
+        $bedActionTitle = xlt('Manage Bed Assignments');
+        $backgroundPatientCard = null;
+        $modeText = '';
+    }
 }
 
 // REDIRECCIÓN AUTOMÁTICA: Si estamos en modo 'Management' y el paciente ya tiene cama, ir directo a ella.
@@ -556,7 +563,10 @@ if (isset($_GET['facility_id']) && !isset($_GET['unit_id'])) {
         <!-- Contenedor que incluye el botón y el cuadradito con texto -->
         <div style="display: flex; justify-content: space-between; align-items: center; position: relative; width: 100%;">
             <a href="?view=units&facility_id=<?php echo urlencode($facilityId); ?>&facility_name=<?php echo urlencode($facilityName); ?>&bed_action=<?php echo urlencode($bedAction); ?>&from_id_beds_patients=<?php echo urlencode($_GET['from_id_beds_patients'] ?? ''); ?>&patient_id_relocate=<?php echo urlencode($patientData['id'] ?? ''); ?>&patient_name_relocate=<?php echo urlencode($patientData['name'] ?? ''); ?>" class="btn btn-secondary mt-4"><i class="fas fa-arrow-left"></i> <?php echo xlt('Back to Units'); ?></a>
-            <?php if ($patientData['id']): ?>
+            <?php if ($bedAction === 'BedManagement'): ?>
+                <a href="assign.php" class="btn btn-primary mt-4 ms-2"><i class="fas fa-home"></i> <?php echo xlt('Principal Board'); ?></a>
+            <?php endif; ?>
+            <?php if ($patientData['id'] || $bedAction === 'BedManagement'): ?>
                 <div style="display: flex; align-items: center; position: absolute; right: 0;">
                     <div style="width: 50px; height: 20px; background-color: <?php echo htmlspecialchars($backgroundPatientCard); ?>; border: 1px solid #000; margin-right: 10px;"></div>
                     <span><?php echo $modeText; ?></span>

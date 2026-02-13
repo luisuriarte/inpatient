@@ -49,7 +49,7 @@ $infusion_datetime = date('Y-m-d\TH:i'); // Formato ISO para el input de fecha y
 
 <p><strong><?php echo xlt("Operator"); ?>:</strong> <?php echo text($_SESSION['authUser']); ?></p>
 
-<div class="modal-footer">
+<div class="d-flex justify-content-between mt-3 pt-3 border-top">
     <button type="button" class="btn btn-primary" onclick="saveConfirmedDose(<?php echo attr($supply_id); ?>)"><?php echo xlt("Save"); ?></button>
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo xlt("Cancel"); ?></button>
 </div>
@@ -76,7 +76,7 @@ function saveConfirmedDose(supplyId) {
         },
         success: function(response) {
             alert('<?php echo xlt("Dose confirmed successfully"); ?>');
-            $('#marActionsModal').modal('hide');
+            closeMarModal();
             location.reload();
         },
         error: function() {

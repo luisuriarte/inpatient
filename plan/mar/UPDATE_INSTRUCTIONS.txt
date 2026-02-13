@@ -1,0 +1,20 @@
+// INSTRUCCIONES PARA ACTUALIZAR modal_mar_actions.php
+// Reemplazar la función suspendSchedule (líneas 178-192) con el siguiente código:
+
+function suspendSchedule(scheduleId) {
+    $.ajax({
+        url: 'modal_order_suspend.php',
+        type: 'GET',
+        data: { schedule_id: scheduleId },
+        success: function(response) {
+            // Insertar el contenido dinámico en el contenedor de modales
+            $('#dynamicModalContainer').html(response);
+            // Crear y mostrar el modal de suspensión
+            var suspendModal = new bootstrap.Modal(document.getElementById('suspendScheduleModal'));
+            suspendModal.show();
+        },
+        error: function() {
+            alert('Error loading the suspension modal.');
+        }
+    });
+}

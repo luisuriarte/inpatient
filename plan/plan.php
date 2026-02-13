@@ -7,16 +7,18 @@ require_once('../../interface/globals.php');
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
-// The patient ID and name should be already available
-$patient_id = isset($patient_id) ? $patient_id : null;
+// Detectar paciente activo en la sesión de OpenEMR
+$patient_id = isset($patient_id) ? $patient_id : ($_SESSION['pid'] ?? null);
 $patient_name = isset($patient_name) ? $patient_name : '';
-$title_patient_name = $patient_name;
-$title_patient_dni = $patient_dni;
-$title_patient_age = $patient_age;
-$title_patient_sex = $patient_sex;
-$title_insurance_name = $insurance_name;
 
-$backgroundPatientCard = "#f6f9bc";
+if ($patient_id && empty($patient_name)) {
+    $patient_res = getPatientData($patient_id, "fname, lname");
+    if ($patient_res) {
+        $patient_name = $patient_res['fname'] . ' ' . $patient_res['lname'];
+    }
+}
+
+$backgroundPatientCard = "#f1f1f1d8";
 ?>
 
 <!DOCTYPE html>
@@ -38,12 +40,12 @@ $backgroundPatientCard = "#f6f9bc";
 <body>
 
 <div class="container mt-4">
-    <?php
-        // Validar que al menos una variable tenga un valor no vacío y sin espacios en blanco
-    //    if (trim($patient_id) !== '' || trim($patient_name) !== '') {
-            include '../patient_header.html';
-    //    }
-    ?>
+    <!-- Mostrar encabezado solo si hay paciente seleccionado -->
+    <?php if ($patientData['id']): ?>
+        <div class="patient-header">
+            <?php include '../../patient_header.html'; ?>
+        </div>
+    <?php endif; ?>
     <!-- Iconos del Pizarrón -->
 	<div class="icon-container">
 		<!-- Botón para MAR -->

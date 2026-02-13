@@ -117,23 +117,23 @@ function getFacilitiesData() {
  */
 function getCurrentBedStatus($bedId) {
     // Verificar si hay un paciente activo en la cama
-    $patientQuery = "SELECT 
-                        bp.id as beds_patients_id, 
-                        bp.patient_id, 
-                        bp.status, 
-                        p.fname, 
+    $patientQuery = "SELECT
+                        bp.id as beds_patients_id,
+                        bp.patient_id,
+                        bp.status,
+                        p.fname,
                         p.lname,
-                        bp.admission_date, 
+                        bp.admission_date,
                         bp.patient_care,
                         bp.responsible_user_id
                      FROM beds_patients bp
-                     INNER JOIN patient_data p ON bp.patient_id = p.id
-                     WHERE bp.current_bed_id = ? 
+                     LEFT JOIN patient_data p ON bp.patient_id = p.id
+                     WHERE bp.current_bed_id = ?
                      AND bp.status IN ('preadmitted', 'admitted')
                      LIMIT 1";
-    
+
     $patientData = sqlQuery($patientQuery, [$bedId]);
-    
+
     if ($patientData) {
         return [
             'condition' => ($patientData['status'] === 'preadmitted') ? 'reserved' : 'occupied',
@@ -786,11 +786,136 @@ function debugLog($message) {
     $logFile = '/var/log/nginx/logfile.txt';
     file_put_contents($logFile, $message . PHP_EOL, FILE_APPEND);
 }
-
 function createPrescriptionsSupply($schedule_id) {
-    // ... (código existente sin cambios)
-}
+    // Obtener datos de prescriptions_schedule usando sqlStatement() y sqlFetchArray()
+    $schedule_query = "SELECT * FROM prescriptions_schedule WHERE schedule_id = ?";
+    $schedule_result = sqlStatement($schedule_query, array($schedule_id));
+    $schedule = sqlFetchArray($schedule_result);
 
+    if (!$schedule) return;
+
+    $patient_id = $schedule['patient_id'];
+    $start_date = new DateTime($schedule['start_date']);
+    $unit_frequency = (int)$schedule['unit_frequency']; // Ejemplo: 12
+    $time_frequency = $schedule['time_frequency']; // Ejemplo: 'hours'
+    $unit_duration = (int)$schedule['unit_duration']; // Ejemplo: 0
+    $time_duration = $schedule['time_duration']; // Ejemplo: ''
+
+    // Depuración de los valores
+    //debugLog("Unit Frequency: $unit_frequency");
+    //debugLog("Time Frequency: $time_frequency");
+    //debugLog("Unit Duration: $unit_duration");
+    //debugLog("Time Duration: $time_duration");
+
+    // Si no hay duration, establecer una duración predeterminada o manejar el error
+    if ($unit_duration <= 0 || empty($time_duration)) {
+        // Establecer una duración predeterminada (ejemplo: 24 horas)
+        $unit_duration = 1;
+        $time_duration = 'days';
+        //debugLog("No se definió la duración. Se usa la duración predeterminada: $unit_duration $time_duration.");
+    }
+
+    // Calcular end_date
+    $end_date = null;
+
+    if (!empty($schedule['end_date'])) {
+        $end_date = new DateTime($schedule['end_date']);
+    } else if ($unit_duration > 0 && !empty($time_duration)) {
+        // Calcular el end_date basado en la duración
+        $duration_interval = DateInterval::createFromDateString("{$unit_duration} {$time_duration}");
+        $end_date = clone $start_date; 
+        $end_date->add($duration_interval);
+        
+        // Depuración del end_date calculado
+        //debugLog("Calculated End Date: " . $end_date->format('Y-m-d H:i:s'));
+    } else {
+        //debugLog("No se pudo calcular el end_date: unidad de duración o tiempo de duración no definidos.");
+        return;
+    }
+
+    //debugLog("Start Date: " . $start_date->format('Y-m-d H:i:s'));
+    //debugLog("End Date: " . ($end_date ? $end_date->format('Y-m-d H:i:s') : 'No se pudo calcular.'));
+
+    // Crear el intervalo de repetición
+    if ($unit_frequency > 0) {
+        $frequency_interval = DateInterval::createFromDateString("$unit_frequency $time_frequency");
+    } else {
+        //debugLog("Frequency Interval no válido.");
+        return;
+    }
+
+    // Calcular el número máximo de repeticiones basado en la duración
+    $max_repetitions = null;
+    if ($end_date) {
+        // Calcular la duración total desde el start_date hasta el end_date en segundos
+        $total_duration_seconds = $end_date->getTimestamp() - $start_date->getTimestamp();
+        
+        // Convertir el intervalo de frecuencia a segundos
+        $frequency_seconds = 0;
+        switch ($time_frequency) {
+            case 'seconds':
+                $frequency_seconds = $unit_frequency;
+                break;
+            case 'minutes':
+                $frequency_seconds = $unit_frequency * 60;
+                break;
+            case 'hours':
+                $frequency_seconds = $unit_frequency * 3600;
+                break;
+            case 'days':
+                $frequency_seconds = $unit_frequency * 86400;
+                break;
+            case 'weeks':
+                $frequency_seconds = $unit_frequency * 604800;
+                break;
+            case 'months':
+                $frequency_seconds = $unit_frequency * 2592000; // Aproximadamente 30 días
+                break;
+        }
+
+        // Calcular el número de repeticiones
+        if ($frequency_seconds > 0) {
+            $max_repetitions = (int)($total_duration_seconds / $frequency_seconds);
+            //$max_repetitions = (int)($total_duration_seconds / $frequency_seconds) + 2; // +2 para incluir la primera y última dosis
+        }
+    } else {
+        // Si no hay end_date, usar un valor predeterminado
+        $max_repetitions = 1;  // Usar solo una dosis si no se puede calcular la duración
+    }
+
+    //debugLog("Max Repetitions Calculated: $max_repetitions");
+
+    // Crear el periodo de repeticiones
+    if ($max_repetitions > 0) {
+        $period = new DatePeriod($start_date, $frequency_interval, $max_repetitions - 1);  // Ajuste para que incluya la primera y última dosis
+    } else {
+        //debugLog("No hay repeticiones válidas.");
+        return;
+    }
+    $user_id = $_SESSION['authUserID']; // Obtener el ID del usuario
+    // Iterar por el periodo definido
+    $dose_number = 1;  // Inicializar el número de dosis
+    foreach ($period as $current_date) {
+        // Calcular las alarmas antes de la administración (opcional)
+        $alarm1_datetime = null;
+        if (!empty($schedule['alarm1_unit']) && !empty($schedule['alarm1_time'])) {
+            $alarm1_interval = DateInterval::createFromDateString("{$schedule['alarm1_unit']} {$schedule['alarm1_time']}");
+            $alarm1_datetime = clone $current_date;
+            $alarm1_datetime->sub($alarm1_interval);  // Restar la alarma del tiempo actual
+        }
+
+        $alarm2_datetime = null;
+        if (!empty($schedule['alarm2_unit']) && !empty($schedule['alarm2_time'])) {
+            $alarm2_interval = DateInterval::createFromDateString("{$schedule['alarm2_unit']} {$schedule['alarm2_time']}");
+            $alarm2_datetime = clone $current_date;
+            $alarm2_datetime->sub($alarm2_interval);  // Restar la alarma del tiempo actual
+        }
+
+        // Insertar el suministro en prescriptions_supply
+        handlePrescriptionSupply($schedule_id, $patient_id, $dose_number, $max_repetitions, $current_date, $alarm1_datetime, $alarm2_datetime, $user_id);
+        $dose_number++;  // Incrementar el número de dosis
+    }
+}
 function deactivatePreviousSchedule($schedule_id, $user_id) {
     $deactivate_query = "UPDATE prescriptions_schedule 
                          SET active = 0, 
@@ -845,11 +970,10 @@ function handlePrescriptionSupply($schedule_id, $patient_id, $dose_number, $max_
     
     // Revisar si ocurrió algún error
     if (!$result) {
-        // Obtener el último error SQL y mostrarlo
-        echo "Error en la consulta: " . sqlStatementError();
-    } else {
-        echo "Inserción exitosa: Dosis {$dose_number} programada para {$schedule_datetime_formatted}<br>";
+        // Obtener el último error SQL y registrarlo en el log
+        error_log("Error en la consulta handlePrescriptionSupply: " . sqlStatementError());
     }
+    // Nota: No usar echo aquí, ya que esta función puede ser llamada desde APIs que retornan JSON
 }
 
 function getDoseDetails($supply_id) {
@@ -857,30 +981,43 @@ function getDoseDetails($supply_id) {
         die(xlt('No supply ID provided.'));
     }
 
+    // Debug: Log the supply_id being queried
+    error_log("getDoseDetails: Querying for supply_id=$supply_id");
+
     // Definir la consulta
     $dose_query = "
-        SELECT ps.supply_id, ps.schedule_datetime, ps.alarm1_datetime, ps.alarm1_active, ps.alarm2_datetime, ps.alarm2_active, 
-            ps.status, ps.dose_number, ps.max_dose, DATE_FORMAT(ps.schedule_datetime, '%h:%i %p') AS hs, 
-            CONCAT(p.lname, ', ', p.fname, 
+        SELECT ps.supply_id, ps.schedule_datetime, ps.alarm1_datetime, ps.alarm1_active, ps.alarm2_datetime, ps.alarm2_active,
+            ps.status, ps.dose_number, ps.max_dose, DATE_FORMAT(ps.schedule_datetime, '%h:%i %p') AS hs,
+            CONCAT(p.lname, ', ', p.fname,
             IF(p.mname IS NOT NULL AND p.mname != '', CONCAT(' ', p.mname), '')) AS patient_name,
-            bp.bed_id, bp.room_id, bp.unit_id, bp.facility_id, 
+            bp.current_bed_id AS bed_id, bp.current_room_id AS room_id, bp.current_unit_id AS unit_id, bp.facility_id,
             f.name AS facility_name, u.unit_name AS unit_name, r.room_name AS room_name, b.bed_name AS bed_name,
-            ps.schedule_id
+            ps.schedule_id, ps.effectiveness_score, ps.effectiveness_notes, ps.reaction_description,
+            ps.reaction_time, ps.reaction_severity, ps.reaction_notes
         FROM prescriptions_supply ps
         LEFT JOIN prescriptions_schedule sch ON ps.schedule_id = sch.schedule_id
         LEFT JOIN patient_data AS p ON sch.patient_id = p.pid
         LEFT JOIN beds_patients AS bp ON bp.patient_id = p.pid
         LEFT JOIN facility AS f ON f.id = bp.facility_id
-        LEFT JOIN units AS u ON u.id = bp.unit_id
-        LEFT JOIN rooms AS r ON r.id = bp.room_id
-        LEFT JOIN beds AS b ON b.id = bp.bed_id
+        LEFT JOIN units AS u ON u.id = bp.current_unit_id
+        LEFT JOIN rooms AS r ON r.id = bp.current_room_id
+        LEFT JOIN beds AS b ON b.id = bp.current_bed_id
         WHERE ps.supply_id = ?
         GROUP BY ps.supply_id
         ORDER BY ps.schedule_datetime;
     ";
 
     // Ejecutar la consulta y devolver el resultado
-    return sqlQuery($dose_query, [$supply_id]);
+    $result = sqlQuery($dose_query, [$supply_id]);
+    
+    // Debug: Log whether a result was found
+    if ($result) {
+        error_log("getDoseDetails: Found result for supply_id=$supply_id");
+    } else {
+        error_log("getDoseDetails: No result found for supply_id=$supply_id");
+    }
+    
+    return $result;
 
 }
 

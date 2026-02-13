@@ -9,16 +9,18 @@ $searchQuery = $_POST['searchQuery'] ?? '';
 $sql = "
     SELECT 
         pd.lname, pd.fname, pd.mname, pd.pubpid, pd.pid, pd.DOB,
-        bp.bed_name, r.room_name, ls.title AS sector_title, r.sector, u.unit_name,
+        b.bed_name, r.room_name, ls.title AS sector_title, r.sector, u.unit_name,
         lo.title AS floor_name
     FROM 
         beds_patients bp
     JOIN 
         patient_data pd ON bp.patient_id = pd.pid
     JOIN 
-        rooms r ON bp.room_id = r.id
+        beds b ON bp.current_bed_id = b.id
     JOIN 
-        units u ON bp.unit_id = u.id
+        rooms r ON bp.current_room_id = r.id
+    JOIN 
+        units u ON bp.current_unit_id = u.id
     LEFT JOIN 
         list_options lo ON u.floor = lo.option_id AND lo.list_id = 'unit_floor'
     LEFT JOIN 
@@ -26,8 +28,8 @@ $sql = "
     WHERE 
         (pd.fname LIKE ? OR pd.mname LIKE ? OR pd.lname LIKE ? OR pd.pubpid LIKE ? 
          OR r.room_name LIKE ? OR u.unit_name LIKE ? OR r.sector LIKE ? OR ls.title LIKE ? OR lo.title LIKE ?)
-        AND bp.condition = 'occupied'
-        AND bp.active = 1
+        AND bp.status = 'admitted'
+        AND b.active = 1
 ";
 
 $result = sqlStatement($sql, [

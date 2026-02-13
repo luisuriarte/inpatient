@@ -352,10 +352,30 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('time_unit', 'seconds', 'Seconds', 0, 0, 0, '', '', '');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('time_unit', 'weeks', 'Weeks', 0, 0, 0, '', '', '');
 
-INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'effective', 'Effective', 10, 1, 0, '', '', '');
-INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'ineffective', 'Ineffective', 20, 0, 0, '', '', '');
-INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'mild', 'Mild', 30, 0, 0, '', '', '');
-INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES ('drug_effectiveness', 'moderate', 'Moderate', 40, 0, 0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'adverse_effect', 'Adverse Effect', 30, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'effective', 'Effective', 10, 1, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'ineffective', 'Ineffective', 25, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'minimally_effective', 'Minimally Effective', 20, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'moderately_effective', 'Moderately Effective', 15, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'unknown', 'Unknown', 35, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_effectiveness', 'very_effective', 'Very Effective', 5, 0, 0.0, '', '', '');
+
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'anaphylaxis', 'Anaphylaxis', 75, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'chest_pain', 'Chest Pain', 60, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'diarrhea', 'Diarrhea', 35, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'dizziness', 'Dizziness', 45, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'fatigue', 'Fatigue', 50, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'headache', 'Headache', 40, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'hives', 'Hives/Urticaria', 15, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'itching', 'Itching/Pruritus', 20, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'nausea', 'Nausea', 25, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'no_reaction', 'No Reaction', 5, 1, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'other', 'Other', 80, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'palpitations', 'Palpitations', 65, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'rash', 'Rash', 10, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'shortness_of_breath', 'Shortness of Breath', 55, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'swelling', 'Swelling/Edema', 70, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('drug_reaction', 'vomiting', 'Vomiting', 30, 0, 0.0, '', '', '');
 
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'available', 'Available', 1, 0, 0.0, '', '', '');
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_status', 'occupied', 'Occupied', 2, 0, 0.0, '', '', '');
@@ -384,3 +404,12 @@ INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_val
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'b-ector', 'B Sector', 2, 0, 0.0, '', '', '');
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'east-wing', 'East Wing', 4, 0, 0.0, '', '', '');
 INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('room_sector', 'north-wing', 'North Wing', 3, 0, 0.0, '', '', '');
+
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'adverse_reaction', 'Adverse Reaction', 1, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'clinical_improvement', 'Clinical Improvement', 5, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'drug_interaction', 'Drug Interaction', 4, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'medical_order', 'Medical Order', 2, 1, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'non_responsive', 'Non-Responsive', 7, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'other', 'Other', 8, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'patient_refusal', 'Patient Refusal', 3, 0, 0.0, '', '', '');
+INSERT INTO list_options (list_id, option_id, title, seq, is_default, option_value, mapping, notes, codes) VALUES('Reason_Discontinue_Medication', 'transfer_discharge', 'Transfer/Discharge', 6, 0, 0.0, '', '', '');

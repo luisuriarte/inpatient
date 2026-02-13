@@ -8,7 +8,6 @@ $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
 // Detectar paciente activo en la sesión de OpenEMR
-// El ID y nombre del paciente ya deberían estar disponibles por el core de OpenEMR
 $patient_id = isset($patient_id) ? $patient_id : ($_SESSION['pid'] ?? null);
 $patient_name = isset($patient_name) ? $patient_name : '';
 
@@ -21,32 +20,129 @@ if ($patient_id && empty($patient_name)) {
 
 $backgroundPatientCard = "#f6f9bc";
 
-// Lógica para el botón "Patient Check-Out / Relocate"
-$patientAdmitted = false;
-$managementUrl = "javascript:void(0);"; // Por defecto no hace nada si no cumple condiciones
+// ==========================================
+// LÓGICA PARA "Patient Check-In / Reserve"
+// ==========================================
+$hasPreadmission = false;
+$hasAdmission = false;
+$checkInUrl = "assign_bed.php?patient_id=" . urlencode($patient_id) .
+              "&patient_name=" . urlencode($patient_name) .
+              "&bed_action=Assign";
 
 if ($patient_id) {
-    $checkBedQuery = "SELECT bp.current_bed_id, bp.current_room_id as room_id, bp.current_unit_id as unit_id, bp.facility_id, 
-                             r.room_name, u.unit_name, f.name as facility_name
-                      FROM beds_patients bp
-                      LEFT JOIN rooms r ON bp.current_room_id = r.id
-                      LEFT JOIN units u ON bp.current_unit_id = u.id
-                      LEFT JOIN facility f ON bp.facility_id = f.id
-                      WHERE bp.patient_id = ? AND bp.status IN ('admitted', 'preadmitted')";
-    $result = sqlStatement($checkBedQuery, [$patient_id]);
-    $existingBed = sqlFetchArray($result);
+    // Detectar si el paciente tiene una ADMISIÓN activa (prioritario sobre pre-admisión)
+    $admissionQuery = "SELECT bp.id as beds_patients_id,
+                              bp.current_bed_id,
+                              bp.current_room_id,
+                              bp.current_unit_id,
+                              bp.facility_id,
+                              b.bed_name,
+                              r.room_name,
+                              u.unit_name,
+                              f.name as facility_name
+                       FROM beds_patients bp
+                       LEFT JOIN beds b ON bp.current_bed_id = b.id
+                       LEFT JOIN rooms r ON bp.current_room_id = r.id
+                       LEFT JOIN units u ON bp.current_unit_id = u.id
+                       LEFT JOIN facility f ON bp.facility_id = f.id
+                       WHERE bp.patient_id = ?
+                       AND bp.status = 'admitted'
+                       LIMIT 1";
 
-    if ($existingBed) {
-        $patientAdmitted = true;
-        $managementUrl = "load_beds.php?view=room" . 
-                       "&room_id=" . urlencode($existingBed['room_id']) . 
-                       "&room_name=" . urlencode($existingBed['room_name']) . 
-                       "&unit_id=" . urlencode($existingBed['unit_id']) . 
-                       "&unit_name=" . urlencode($existingBed['unit_name']) . 
-                       "&facility_id=" . urlencode($existingBed['facility_id']) . 
-                       "&facility_name=" . urlencode($existingBed['facility_name']) . 
-                       "&bed_action=Management" . 
-                       "&patient_id=" . urlencode($patient_id);
+    $admissionData = sqlQuery($admissionQuery, [$patient_id]);
+
+    if ($admissionData && $admissionData['current_bed_id']) {
+        // Tiene admisión con cama asignada
+        $hasAdmission = true;
+        $checkInUrl = "load_beds.php?room_id=" . urlencode($admissionData['current_room_id']) .
+                      "&room_name=" . urlencode($admissionData['room_name']) .
+                      "&unit_id=" . urlencode($admissionData['current_unit_id']) .
+                      "&unit_name=" . urlencode($admissionData['unit_name']) .
+                      "&facility_id=" . urlencode($admissionData['facility_id']) .
+                      "&facility_name=" . urlencode($admissionData['facility_name']) .
+                      "&bed_action=Assign" .
+                      "&patient_id=" . urlencode($patient_id) .
+                      "&patient_name=" . urlencode($patient_name) .
+                      "&beds_patients_id=" . urlencode($admissionData['beds_patients_id']);
+    } else {
+        // Si no tiene admisión, verificar si tiene pre-admisión
+        $preadmissionQuery = "SELECT bp.id as beds_patients_id,
+                                     bp.current_bed_id,
+                                     bp.current_room_id,
+                                     bp.current_unit_id,
+                                     bp.facility_id,
+                                     b.bed_name,
+                                     r.room_name,
+                                     u.unit_name,
+                                     f.name as facility_name
+                              FROM beds_patients bp
+                              LEFT JOIN beds b ON bp.current_bed_id = b.id
+                              LEFT JOIN rooms r ON bp.current_room_id = r.id
+                              LEFT JOIN units u ON bp.current_unit_id = u.id
+                              LEFT JOIN facility f ON bp.facility_id = f.id
+                              WHERE bp.patient_id = ?
+                              AND bp.status = 'preadmitted'
+                              LIMIT 1";
+
+        $preadmissionData = sqlQuery($preadmissionQuery, [$patient_id]);
+
+        if ($preadmissionData && $preadmissionData['current_bed_id']) {
+            // Tiene pre-admisión con cama reservada
+            $hasPreadmission = true;
+            $checkInUrl = "load_beds.php?room_id=" . urlencode($preadmissionData['current_room_id']) .
+                          "&room_name=" . urlencode($preadmissionData['room_name']) .
+                          "&unit_id=" . urlencode($preadmissionData['current_unit_id']) .
+                          "&unit_name=" . urlencode($preadmissionData['unit_name']) .
+                          "&facility_id=" . urlencode($preadmissionData['facility_id']) .
+                          "&facility_name=" . urlencode($preadmissionData['facility_name']) .
+                          "&bed_action=Assign" .
+                          "&patient_id=" . urlencode($patient_id) .
+                          "&patient_name=" . urlencode($patient_name) .
+                          "&beds_patients_id=" . urlencode($preadmissionData['beds_patients_id']);
+        }
+    }
+}
+
+// ==========================================
+// LÓGICA PARA "Patient Check-Out / Relocate"
+// ==========================================
+$isAdmitted = false;
+$managementUrl = "javascript:void(0);";
+
+if ($patient_id) {
+    // Detectar si el paciente tiene una ADMISIÓN activa (admitted)
+    $admissionQuery = "SELECT bp.id as beds_patients_id,
+                              bp.current_bed_id, 
+                              bp.current_room_id, 
+                              bp.current_unit_id, 
+                              bp.facility_id,
+                              b.bed_name,
+                              r.room_name, 
+                              u.unit_name, 
+                              f.name as facility_name
+                       FROM beds_patients bp
+                       LEFT JOIN beds b ON bp.current_bed_id = b.id
+                       LEFT JOIN rooms r ON bp.current_room_id = r.id
+                       LEFT JOIN units u ON bp.current_unit_id = u.id
+                       LEFT JOIN facility f ON bp.facility_id = f.id
+                       WHERE bp.patient_id = ? 
+                       AND bp.status = 'admitted'
+                       LIMIT 1";
+    
+    $admissionData = sqlQuery($admissionQuery, [$patient_id]);
+    
+    if ($admissionData && $admissionData['current_bed_id']) {
+        $isAdmitted = true;
+        $managementUrl = "load_beds.php?room_id=" . urlencode($admissionData['current_room_id']) . 
+                        "&room_name=" . urlencode($admissionData['room_name']) . 
+                        "&unit_id=" . urlencode($admissionData['current_unit_id']) . 
+                        "&unit_name=" . urlencode($admissionData['unit_name']) . 
+                        "&facility_id=" . urlencode($admissionData['facility_id']) . 
+                        "&facility_name=" . urlencode($admissionData['facility_name']) . 
+                        "&bed_action=Management" . 
+                        "&patient_id=" . urlencode($patient_id) .
+                        "&patient_name=" . urlencode($patient_name) .
+                        "&beds_patients_id=" . urlencode($admissionData['beds_patients_id']);
     }
 }
 ?>
@@ -60,7 +156,7 @@ if ($patient_id) {
     <title><?php echo xlt('Main Board'); ?></title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../../styles.css"> <!-- Enlace al archivo CSS externo -->
+    <link rel="stylesheet" href="../../styles.css">
     <style>
         :root {
             --background-color: <?php echo $backgroundPatientCard; ?>;
@@ -71,56 +167,57 @@ if ($patient_id) {
 <div class="container mt-4">
     <!-- Iconos del Pizarrón -->
     <div class="icon-container d-flex flex-wrap justify-content-center gap-4">
-        <!-- Botón para Ingreso / Reserva (Requiere Paciente) -->
-        <a href="assign_bed.php?patient_id=<?php echo urlencode($patient_id); ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Assign" 
-           class="btn btn-custom btn-primary-custom" 
-           id="assignEntryBtn"
-           onclick="return handleEntryClick(event, true)">
-            <i class="fas fa-user-plus fa-2x mb-2"></i>
-            <p><?php echo xl('Patient Check-In / Reserve'); ?></p>
+        
+        <!-- Botón 1: Patient Operations -->
+        <a href="<?php echo $checkInUrl; ?>"
+           class="btn btn-custom btn-primary-custom"
+           id="patientOpsBtn"
+           onclick="return handleCheckInClick(event)">
+            <i class="fas fa-user-injured fa-2x mb-2"></i>
+            <p><?php echo xl('Patient Operations'); ?></p>
         </a>
 
-        <!-- Botón para Gestión de Internación / Tablero (AHORA Requiere Paciente) -->
-        <a href="<?php echo $managementUrl; ?>" 
-           class="btn btn-custom btn-success-custom" 
-           id="managementEntryBtn"
-           onclick="return handleManagementClick(event)">
-            <i class="fas fa-chalkboard-user fa-2x mb-2"></i>
-            <p><?php echo xl('Patient Check-Out / Relocate'); ?></p>
+        <!-- Botón 2: Bed Operations -->
+        <a href="assign_bed.php?bed_action=BedManagement"
+           class="btn btn-custom btn-success-custom"
+           id="bedOpsBtn">
+            <i class="fas fa-bed fa-2x mb-2"></i>
+            <p><?php echo xl('Bed Operations'); ?></p>
         </a>
 
-        <!-- Botón para Buscar -->
-        <a href="patient_search.php?patient_id=<?php echo urlencode($patient_id); ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Search" 
+        <!-- Botón 3: Search Patient -->
+        <a href="patient_search.php?patient_id=<?php echo urlencode($patient_id); ?>&patient_name=<?php echo urlencode($patient_name); ?>&bed_action=Search"
            class="btn btn-custom btn-danger-custom">
             <i class="fas fa-search fa-2x mb-2"></i>
             <p><?php echo xl('Search Patient'); ?></p>
         </a>
+        
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script>
-function handleEntryClick(event, requiresPatient) {
-    const patientId = "<?php echo $patient_id; ?>";
+// ==========================================
+// FUNCIÓN: Validar selección de paciente
+// ==========================================
+function validatePatientSelected() {
+    const patientId = "<?php echo $patient_id ?? ''; ?>";
     
-    if (requiresPatient && (!patientId || patientId === "")) {
-        event.preventDefault();
-        alert("<?php echo xlt('Please select a patient first to proceed with Inpatient Check-In.'); ?>\n<?php echo xlt('Open Patient Finder Tab'); ?>");
+    if (!patientId || patientId === "") {
+        alert("<?php echo xlt('Please select a patient first'); ?>\n<?php echo xlt('Open Patient Finder Tab'); ?>");
         
         // Intentar enfocar la pestaña de Patient Finder en OpenEMR
         const tabIds = ['finder', 'pat_finder'];
-        let success = false;
         try {
             for (const id of tabIds) {
                 if (typeof top.focusTab === 'function') {
                     top.focusTab(id);
-                    success = true;
+                    break;
                 } else if (top.maintab && typeof top.maintab.openTab === 'function') {
                     top.maintab.openTab(id);
-                    success = true;
+                    break;
                 }
-                if (success) break;
             }
         } catch (e) {
             console.error("Error al intentar cambiar a la pestaña Finder:", e);
@@ -130,21 +227,39 @@ function handleEntryClick(event, requiresPatient) {
     return true;
 }
 
-function handleManagementClick(event) {
-    // 1. Validar si hay paciente seleccionado (reutilizando la lógica anterior)
-    if (!handleEntryClick(event, true)) {
+// ==========================================
+// FUNCIÓN: Manejar clic en Check-In / Reserve
+// ==========================================
+function handleCheckInClick(event) {
+    // 1. Validar que haya paciente seleccionado
+    if (!validatePatientSelected()) {
+        event.preventDefault();
         return false;
     }
 
-    // 2. Validar si el paciente está internado
-    var isAdmitted = <?php echo $patientAdmitted ? 'true' : 'false'; ?>;
-    
-    if (!isAdmitted) {
-        event.preventDefault();
-        alert("<?php echo xlt('Selected patient is not currently admitted'); ?>");
-        return false;
+    // 2. Informar al usuario si tiene admisión o pre-admisión
+    var hasAdmission = <?php echo $hasAdmission ? 'true' : 'false'; ?>;
+    var hasPreadmission = <?php echo $hasPreadmission ? 'true' : 'false'; ?>;
+
+    if (hasAdmission) {
+        // El usuario será redirigido directamente a la cama asignada
+        console.log("Patient has admission - redirecting to assigned bed");
+    } else if (hasPreadmission) {
+        // El usuario será redirigido directamente a la cama reservada
+        console.log("Patient has preadmission - redirecting to reserved bed");
+    } else {
+        // El usuario navegará por Facility → Unit → Room
+        console.log("Patient has no admission or preadmission - redirecting to facility selection");
     }
-    
+
+    return true;
+}
+
+// ==========================================
+// FUNCIÓN: Manejar clic en Bed Operations
+// ==========================================
+function handleBedOpsClick(event) {
+    // No se requiere validación específica para operaciones de cama
     return true;
 }
 </script>

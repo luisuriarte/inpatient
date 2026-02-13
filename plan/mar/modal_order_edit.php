@@ -26,11 +26,11 @@ $query = "
         LEFT JOIN prescriptions_intravenous AS iv ON iv.schedule_id = ps.schedule_id
         LEFT JOIN patient_data AS p ON ps.patient_id = p.pid
         LEFT JOIN beds_patients AS bp ON bp.patient_id = p.pid
-        LEFT JOIN facility AS f ON f.id = bp.facility_id
-        LEFT JOIN units AS u ON u.id = bp.unit_id
-        LEFT JOIN rooms AS r ON r.id = bp.room_id
-        LEFT JOIN beds AS b ON b.id = bp.bed_id
-    WHERE ps.schedule_id = ? AND bp.`active` = 1 AND ps.status = 'Active'
+LEFT JOIN facility AS f ON f.id = bp.facility_id
+        LEFT JOIN units AS u ON u.id = bp.current_unit_id
+        LEFT JOIN rooms AS r ON r.id = bp.current_room_id
+        LEFT JOIN beds AS b ON b.id = bp.current_bed_id
+    WHERE ps.schedule_id = ? AND bp.status = 'admitted' AND ps.status IN ('Active', 'Modified')
     ORDER BY ps.start_date;
 ";
 
@@ -80,7 +80,8 @@ $psStatus = $result['ps_status'];
 <div class="modal fade" id="editScheduleModal" tabindex="-1" aria-labelledby="editScheduleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <form id="editScheduleForm" method="POST" action="save_order_edit.php">
+<form id="editScheduleForm" method="POST" action="save_order_edit.php">
+                <input type="hidden" name="schedule_id" value="<?php echo attr($schedule_id); ?>">
                 <div class="modal-header">
                     <h5 class="modal-title"><?php echo xlt('Edit Medication Order'); ?></h5>
                     <p><strong><?php echo xlt('Patient'); ?>:</strong> <?php echo text($patientFullName); ?></p>
@@ -207,7 +208,6 @@ $psStatus = $result['ps_status'];
                                     }
                                     ?>
                                 </select>
-                                <input type="hidden" id="route_option_id" name="route_option_id">
                                 </div>
                             </div>
                         </div>
@@ -216,13 +216,13 @@ $psStatus = $result['ps_status'];
                         <!-- Field: Intravenous Switch -->
                         <div class="form-group d-flex align-items-center">
                             <div class="custom-slider-switch mr-3">
-                                <input type="checkbox" name="intravenous_switch" id="intravenousSwitch" value="<?php echo attr($intravenous); ?>" autocomplete="off">
+                                 <input type="checkbox" name="intravenous_switch" id="intravenousSwitchEdit" value="1" autocomplete="off" <?php echo ($intravenous == 1) ? 'checked' : ''; ?>>
                             </div>
                             <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Intravenous'); ?></label>
                         </div>
                     </div>
-                    <!-- Intravenous fields (only visible if Intravenous is Yes) -->
-                    <div id="intravenousFields"  style="background-color: #f9e6e6; border-top: 1px solid #dee2e6;">
+    <!-- Intravenous fields (only visible if Intravenous is Yes) -->
+                    <div id="intravenousFieldsEdit" style="background-color: #f9e6e6; border-top: 1px solid #dee2e6; <?php echo ($intravenous != 1) ? 'display: none;' : ''; ?>">
                         <div class="row">
                             <!-- Field: Vehicle -->
                             <div class="col-md-6">
@@ -337,13 +337,13 @@ $psStatus = $result['ps_status'];
                     <!-- Field: Scheduled -->
                     <div class="form-group d-flex align-items-center">
                         <div class="custom-slider-switch ml-3">
-                            <input type="checkbox" name="scheduled" id="scheduledSwitch" value="<?php echo attr($scheduled); ?>" autocomplete="off">
+                            <input type="checkbox" name="scheduled" id="scheduledSwitchEdit" value="1" autocomplete="off" <?php echo ($scheduled == 1) ? 'checked' : ''; ?>>
                         </div>
                         <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Scheduled'); ?></label>
                     </div>
 
                     <!-- Repeat medication fields (only visible if One-time Medication is No) -->
-                    <div id="repeatFields" style="background-color: #e0e1fb; border-top: 1px solid #dee2e6;">
+                    <div id="repeatFieldsEdit" style="background-color: #e0e1fb; border-top: 1px solid #dee2e6; <?php echo ($scheduled != 1) ? 'display: none;' : ''; ?>">
                         <!-- Group: Unit Frequency and Time Frequency -->
                         <div class="form-group row">
                             <!-- Field: Unit Frequency -->
@@ -361,8 +361,8 @@ $psStatus = $result['ps_status'];
                                     $time_unit_query = "SELECT option_id, title FROM list_options WHERE list_id='time_unit'";
                                     $time_unit_result = sqlStatement($time_unit_query);
                                     while ($time_unit = sqlFetchArray($time_unit_result)) {
-                                        $selected = ($time_unit['title'] == $timeFrequency) ? 'selected' : '';
-                                        echo '<option value="' . attr($time_unit['title']) . '" ' . $selected . '>' . text($time_unit['title']) . '</option>';
+                                        $selected = ($time_unit['option_id'] == $timeFrequency) ? 'selected' : '';
+                                        echo '<option value="' . attr($time_unit['option_id']) . '" ' . $selected . '>' . text($time_unit['title']) . '</option>';
                                     }
                                     ?>
                                 </select>
@@ -371,58 +371,60 @@ $psStatus = $result['ps_status'];
 
                         <!-- Group: Duration and Unit Duration -->
                         <div class="form-group row">
-                            <!-- Field: Duration -->
+<!-- Field: Duration -->
                             <div class="col-md-6">
                                 <label for="duration"><?php echo xlt('Duration'); ?></label>
-                                <input type="number" class="form-control" id="duration" name="duration">
+                                <input type="number" class="form-control" id="duration" name="duration" value="<?php echo attr($unitDuration); ?>">
                             </div>
 
-                            <!-- Field: Unit Duration -->
+<!-- Field: Unit Duration -->
                             <div class="col-md-6">
                                 <label for="time_duration"><?php echo xlt('Unit of Time'); ?></label>
                                 <select class="form-control" id="time_duration" name="time_duration">
                                     <option value=""><?php echo xlt('-- Select One --'); ?></option>
                                     <?php
                                     $duration_unit_query = "SELECT option_id, title FROM list_options WHERE list_id='time_unit'";
-                                    $duration_unit_result = sqlStatement($duration_unit_query); 
+                                    $duration_unit_result = sqlStatement($duration_unit_query);
                                     while ($unit_duration = sqlFetchArray($duration_unit_result)) {
-                                        echo '<option value="' . attr($unit_duration['option_id']) . '">' . text($unit_duration['title']) . '</option>';
+                                        $selected = ($unit_duration['option_id'] == $timeDuration) ? 'selected' : '';
+                                        echo '<option value="' . attr($unit_duration['option_id']) . '" ' . $selected . '>' . text($unit_duration['title']) . '</option>';
                                     }
                                     ?>
                                 </select>
                             </div>
                         </div>
-                        <!-- Field: Start Date/Time -->
+<!-- Field: Start Date/Time -->
                         <div class="col-md-6">
                            <div class="form-group">
                                 <label for="end_date"><?php echo xlt('End Date/Time'); ?></label>
-                                <input type="datetime-local" class="form-control" id="end_date" name="end_date">
+                                <input type="datetime-local" class="form-control" id="end_date" name="end_date" value="<?php echo attr($endDate); ?>">
                             </div>
                         </div>
                     </div>
                     <p> </p>
                     <div class="form-group d-flex align-items-center">
                         <div class="custom-slider-switch ls-3">
-                            <input type="checkbox" name="notifications" id="notificationSwitch" value="1" autocomplete="off">
+                            <input type="checkbox" name="notifications" id="notificationSwitchEdit" value="1" autocomplete="off" <?php echo ($notifications == 1) ? 'checked' : ''; ?>>
                         </div>
                         <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Notifications'); ?></label>
                     </div>
                     <!-- Field: Alarms -->
-                    <div id="notificationFields" style="background-color: #e0fbe1; padding: 15px; border-radius: 5px;">
+                    <div id="notificationFieldsEdit" style="background-color: #e0fbe1; padding: 15px; border-radius: 5px; <?php echo ($notifications != 1) ? 'display: none;' : ''; ?>">
                         <div class="row">
                             <div class="col">
-                                <label for="alarm1_unit"><?php echo xlt('First Alarm (Minutes Offset)'); ?></label>
-                                <input type="number" class="form-control" id="alarm1_unit" name="alarm1_unit">
+<label for="alarm1_unit"><?php echo xlt('First Alarm (Minutes Offset)'); ?></label>
+                                <input type="number" class="form-control" id="alarm1_unit" name="alarm1_unit" value="<?php echo attr($alarm1Unit); ?>">
                             </div>
                             <div class="col">
-                                <label for="alarm1_time"><?php echo xlt('Unit of Time'); ?></label>
+<label for="alarm1_time"><?php echo xlt('Unit of Time'); ?></label>
                                 <select class="form-control" id="alarm1_time" name="alarm1_time">
                                     <option value=""><?php echo xlt('-- Select One --'); ?></option>
                                     <?php
                                     $time_unit_query = "SELECT option_id, title FROM list_options WHERE list_id='time_unit'";
                                     $time_unit_result = sqlStatement($time_unit_query);
                                     while ($time_unit = sqlFetchArray($time_unit_result)) {
-                                        echo '<option value="' . attr($time_unit['option_id']) . '">' . text($time_unit['title']) . '</option>';
+                                        $selected = ($time_unit['option_id'] == $alarm1Time) ? 'selected' : '';
+                                        echo '<option value="' . attr($time_unit['option_id']) . '" ' . $selected . '>' . text($time_unit['title']) . '</option>';
                                     }
                                     ?>
                                 </select>
@@ -430,18 +432,19 @@ $psStatus = $result['ps_status'];
                         </div>
                         <div class="row">
                             <div class="col">
-                                <label for="alarm2_unit"><?php echo xlt('Second Alarm (Minutes Offset)'); ?></label>
-                                <input type="number" class="form-control" id="alarm2_unit" name="alarm2_unit">
+<label for="alarm2_unit"><?php echo xlt('Second Alarm (Minutes Offset)'); ?></label>
+                                <input type="number" class="form-control" id="alarm2_unit" name="alarm2_unit" value="<?php echo attr($alarm2Unit); ?>">
                             </div>
                             <div class="col">
-                                <label for="alarm2_time"><?php echo xlt('Unit of Time'); ?></label>
+<label for="alarm2_time"><?php echo xlt('Unit of Time'); ?></label>
                                 <select class="form-control" id="alarm2_time" name="alarm2_time">
                                     <option value=""><?php echo xlt('-- Select One --'); ?></option>
                                     <?php
                                     // Reutilizamos la misma consulta para ambos selects
                                     $time_unit_result = sqlStatement($time_unit_query);
                                     while ($time_unit = sqlFetchArray($time_unit_result)) {
-                                        echo '<option value="' . attr($time_unit['option_id']) . '">' . text($time_unit['title']) . '</option>';
+                                        $selected = ($time_unit['option_id'] == $alarm2Time) ? 'selected' : '';
+                                        echo '<option value="' . attr($time_unit['option_id']) . '" ' . $selected . '>' . text($time_unit['title']) . '</option>';
                                     }
                                     ?>
                                 </select>
@@ -451,8 +454,8 @@ $psStatus = $result['ps_status'];
                     <p> </p>
                     <!-- Field: Notes -->
                     <div class="form-group">
-                        <label for="note"><?php echo xlt('Notes'); ?></label>
-                        <textarea class="form-control" id="note" name="note"></textarea>
+<label for="note"><?php echo xlt('Notes'); ?></label>
+                        <textarea class="form-control" id="note" name="note"><?php echo text($note); ?></textarea>
                     </div>
                     <p> </p>
                     <!-- Field: Medications List -->
@@ -465,13 +468,105 @@ $psStatus = $result['ps_status'];
                 </div>
                 <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
                     <button type="submit" class="btn btn-success"><?= xlt('Save') ?></button>
-                    <button type="button" class="btn btn-secondary" id="closeModalButton"><?= xlt('Close') ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= xlt('Close') ?></button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <script>
+// Inicializar visibilidad de campos según los switches (se ejecuta inmediatamente al cargar)
+(function() {
+    console.log('Initializing edit modal switches...');
+    
+    // Función para alternar visibilidad de campos intravenosos
+    function toggleIntravenousFieldsEdit() {
+        var isChecked = $('#intravenousSwitchEdit').is(':checked');
+        console.log('Intravenous switch:', isChecked);
+        if (isChecked) {
+            $('#intravenousFieldsEdit').show();
+        } else {
+            $('#intravenousFieldsEdit').hide();
+        }
+    }
 
+    // Función para alternar visibilidad de campos de repetición
+    function toggleScheduledFieldsEdit() {
+        var isChecked = $('#scheduledSwitchEdit').is(':checked');
+        console.log('Scheduled switch:', isChecked);
+        if (isChecked) {
+            $('#repeatFieldsEdit').show();
+        } else {
+            $('#repeatFieldsEdit').hide();
+        }
+    }
 
+    // Función para alternar visibilidad de campos de notificaciones
+    function toggleNotificationFieldsEdit() {
+        var isChecked = $('#notificationSwitchEdit').is(':checked');
+        console.log('Notification switch:', isChecked);
+        if (isChecked) {
+            $('#notificationFieldsEdit').show();
+        } else {
+            $('#notificationFieldsEdit').hide();
+        }
+    }
+
+    // Inicializar visibilidad de campos según los switches
+    toggleIntravenousFieldsEdit();
+    toggleScheduledFieldsEdit();
+    toggleNotificationFieldsEdit();
+
+    // Escuchar cambios en los switches
+    $('#intravenousSwitchEdit').on('change', function() {
+        console.log('Intravenous changed');
+        toggleIntravenousFieldsEdit();
+    });
+
+    $('#scheduledSwitchEdit').on('change', function() {
+        console.log('Scheduled changed');
+        toggleScheduledFieldsEdit();
+    });
+
+    $('#notificationSwitchEdit').on('change', function() {
+        console.log('Notification changed');
+        toggleNotificationFieldsEdit();
+    });
+    
+    // Handler para el botón de cerrar
+    $('#closeModalButton').on('click', function() {
+        $('#editScheduleModal').modal('hide');
+    });
+    
+    // Handler para el submit del formulario via AJAX
+    $('#editScheduleForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = $(this).serialize();
+        
+        $.ajax({
+            url: 'save_order_edit.php',
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    $('#editScheduleModal').modal('hide');
+                    // Recargar la página para ver los cambios
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('Error al guardar los cambios. Por favor, intente nuevamente.');
+            }
+        });
+    });
+    
+    console.log('Edit modal switches initialized');
+})();
 </script>

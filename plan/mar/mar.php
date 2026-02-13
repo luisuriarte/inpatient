@@ -31,9 +31,15 @@ $selected_room = $_POST['room_id'] ?? '';
 $userId = $_SESSION['authUserID'];
 $userFullName = getUserFullName($userId);
 
-// The patient ID and name should be already available
-$patient_id = isset($patient_id) ? $patient_id : null;
-$patient_name = isset($patient_name) ? $patient_name : '';
+// Obtener paciente de la sesión de OpenEMR
+$patient_id = $_SESSION['pid'] ?? null;
+$patient_name = $_SESSION['patient_name'] ?? '';
+if ($patient_id && empty($patient_name)) {
+    $patient_data = getPatientData($patient_id, "fname, lname");
+    if ($patient_data) {
+        $patient_name = $patient_data['fname'] . ' ' . $patient_data['lname'];
+    }
+}
 
 // Consulta para obtener las opciones de Facility, Floor, Unit y Room
 $facilities = sqlStatement("SELECT id, name FROM facility WHERE inactive = 0 ORDER BY name ASC");
@@ -42,7 +48,10 @@ $floors = sqlStatement("SELECT option_id, title FROM list_options WHERE list_id 
 $rooms = $selected_unit ? sqlStatement("SELECT id, room_name FROM rooms WHERE unit_id = ?  AND active = 1", [$selected_unit]) : [];
 
 // Modificar la consulta principal según los filtros
-$filters = "WHERE bp.`active` = 1 AND ps.active = 1";
+// Solo pacientes actualmente admitidos con dosis desde las últimas 24 horas hacia adelante
+$filters = "WHERE bp.status = 'admitted' 
+    AND ps.status NOT IN ('Cancelled', 'Suspended')
+    AND ps.schedule_datetime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)";
 if ($selected_facility) {
     $filters .= " AND bp.facility_id = $selected_facility";
 }
@@ -50,10 +59,10 @@ if ($selected_floor) {
     $filters .= " AND u.floor = '$selected_floor'"; // Filtrar por piso
 }
 if ($selected_unit) {
-    $filters .= " AND bp.unit_id = $selected_unit";
+    $filters .= " AND bp.current_unit_id = $selected_unit";
 }
 if ($selected_room) {
-    $filters .= " AND bp.room_id = $selected_room";
+    $filters .= " AND bp.current_room_id = $selected_room";
 }
 
 $sql_query = "
@@ -65,7 +74,7 @@ SELECT ps.supply_id, ps.schedule_datetime, ps.alarm1_datetime, ps.alarm1_active,
     CONCAT(us.lname, ', ', us.fname, 
       IF(us.mname IS NOT NULL AND us.mname != '', CONCAT(' ', us.mname), '')
      ) AS user_full_name,
-   bp.bed_id, bp.room_id, bp.unit_id, bp.facility_id, bp.`active` AS inpatient,
+   bp.current_bed_id AS bed_id, bp.current_room_id AS room_id, bp.current_unit_id AS unit_id, bp.facility_id, bp.status AS inpatient,
    f.name AS facility_name, u.unit_name AS unit_name, r.room_name AS room_name, b.bed_name AS bed_name,
    ps.schedule_id, pn.id AS prescription_id
 FROM prescriptions_supply ps
@@ -74,12 +83,11 @@ LEFT JOIN prescriptions AS pn ON sch.prescription_id = pn.id
 LEFT JOIN patient_data AS p ON sch.patient_id = p.pid
 LEFT JOIN beds_patients AS bp ON bp.patient_id = p.pid
 LEFT JOIN facility AS f ON f.id = bp.facility_id
-LEFT JOIN units AS u ON u.id = bp.unit_id
-LEFT JOIN rooms AS r ON r.id = bp.room_id
-LEFT JOIN beds AS b ON b.id = bp.bed_id
+LEFT JOIN units AS u ON u.id = bp.current_unit_id
+LEFT JOIN rooms AS r ON r.id = bp.current_room_id
+LEFT JOIN beds AS b ON b.id = bp.current_bed_id
 LEFT JOIN users AS us ON us.id = supplied_by
 $filters
-GROUP BY ps.supply_id
 ORDER BY ps.schedule_datetime;
 ";
 $result = sqlStatement($sql_query);
@@ -99,11 +107,11 @@ $result = sqlStatement($sql_query);
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="../../styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
-    <!-- Cargar JavaScript: jQuery primero, luego Bootstrap, luego Vis.js -->
+     <!-- Cargar JavaScript: jQuery primero, luego Bootstrap, luego Vis.js -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"></script>
     <script src="<?php echo $GLOBALS['webroot']; ?>/interface/main/left_nav.js"></script>
     <!-- <script src="../../functions.js"></script> -->
      
@@ -175,7 +183,16 @@ $result = sqlStatement($sql_query);
                 </select>
             </div>
         </div>
+            <!-- Agregar esto después del formulario de filtros -->
+        <div id="alarmStatus" style="position: fixed; top: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 8px; display: none;">
+            <i class="fas fa-bell"></i> 
+            <span id="activeAlarmCount">0</span> <?php echo xlt('active alarms'); ?>
+            <button class="btn btn-sm btn-warning ms-2" onclick="silenceAllAlarms()">
+                <i class="fas fa-volume-mute"></i> <?php echo xlt('Silence All'); ?>
+            </button>
+        </div>
     </form>
+
     <h1><?php echo xl('Medical Administration Record MAR') ; ?></h1>
         <div id="visualization"></div>
         <div class="text-right mt-3">
@@ -214,7 +231,10 @@ $result = sqlStatement($sql_query);
                     </div>
                 </div>
             </div>
-        </div>
+    <button type="button" class="btn btn-warning" onclick="silenceAllAlarms()">
+        <i class="fas fa-volume-mute"></i> <?php echo xlt('Silence All Alarms'); ?>
+    </button>
+
     <script>
         
         var now = new Date(); // Obtener la fecha y hora actual
@@ -227,13 +247,287 @@ $result = sqlStatement($sql_query);
         //var items = [];
         //var groups = [];
         var existingGroups = {}; // Para almacenar los grupos existentes
+        var pendingAlarms = []; // Para almacenar alarmas que necesitan activarse
+        var activeAlarms = {};
+        var alarmCheckInterval = null;
+        
+        console.log('Creating timeline...');
+        console.log('Items:', items.length, 'Groups:', groups.length);
+        // Obtener el contenedor del timeline
+        var container = document.getElementById('visualization');
+
+        // SOLUCIÓN SIN ARCHIVOS - Generar tonos con Web Audio API
+        var activeAudioContexts = {}; // Para controlar múltiples alarmas
+
         items.clear();
+        groups.clear();
+
+// ==========================================
+// FUNCIONES DE ALARMA (CONSOLIDADAS)
+// ==========================================
+
+// Reproducir sonido con Web Audio API
+function playAlarmSound(alarmType) {
+    console.log('[playAlarmSound] Starting:', alarmType);
+    
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const config = {
+            'alarm1': { frequencies: [800, 1000], duration: 0.3 },
+            'alarm2': { frequencies: [1000, 1200], duration: 0.2 }
+        };
+        
+        const { frequencies, duration } = config[alarmType];
+        let currentFreqIndex = 0;
+        let isPlaying = true;
+        
+        function createBeep() {
+            if (!isPlaying) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequencies[currentFreqIndex];
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            currentFreqIndex = (currentFreqIndex + 1) % frequencies.length;
+            setTimeout(createBeep, duration * 1000 + 100);
+        }
+        
+        createBeep();
+        console.log('[playAlarmSound] ✓ Playing');
+        
+        return {
+            pause: function() {
+                isPlaying = false;
+                console.log('[playAlarmSound] Stopped');
+            },
+            currentTime: 0
+        };
+        
+    } catch (error) {
+        console.error('[playAlarmSound] ✗ Error:', error);
+        return { pause: function() {} };
+    }
+}
+
+// Activar alarma
+function triggerAlarmForItem(itemId, alarmType) {
+    console.log('[triggerAlarm] Item:', itemId, 'Type:', alarmType);
+    
+    if (activeAlarms[itemId]) {
+        console.log('[triggerAlarm] Already active');
+        return;
+    }
+    
+    var item = items.get(itemId);
+    if (!item) {
+        console.error('[triggerAlarm] Item not found!');
+        return;
+    }
+    
+    const alarmSound = playAlarmSound(alarmType);
+    const originalClassName = item.className || '';
+    
+    // Asegurar que la clase blinking se añada correctamente
+    items.update({
+        id: itemId,
+        className: originalClassName + ' blinking'
+    });
+    
+    activeAlarms[itemId] = {
+        sound: alarmSound,
+        originalClassName: originalClassName,
+        timeout: setTimeout(() => stopAlarm(itemId), 120000)
+    };
+    
+    updateAlarmCounter();
+    console.log('[triggerAlarm] ✓ Activated');
+}
+
+// Detener alarma (sin silenciar permanentemente)
+function stopAlarm(itemId) {
+    if (!activeAlarms[itemId]) return;
+    
+    const alarm = activeAlarms[itemId];
+    
+    if (alarm.sound) alarm.sound.pause();
+    if (alarm.timeout) clearTimeout(alarm.timeout);
+    
+    var item = items.get(itemId);
+    if (item) {
+        items.update({
+            id: itemId,
+            className: alarm.originalClassName
+        });
+    }
+    
+    delete activeAlarms[itemId];
+    updateAlarmCounter();
+}
+
+// Silenciar alarma (permanentemente para esta sesión, cambia color a gris)
+function silenceAlarm(itemId) {
+    console.log('[silenceAlarm] Silencing:', itemId);
+    
+    const alarm = activeAlarms[itemId];
+    if (alarm) {
+        if (alarm.sound) alarm.sound.pause();
+        if (alarm.timeout) clearTimeout(alarm.timeout);
+        delete activeAlarms[itemId];
+    }
+    
+    var item = items.get(itemId);
+    if (!item) return;
+    
+    // Solo cambiar si es una alarma
+    if (!item.className.includes('alarm1') && !item.className.includes('alarm2')) return;
+
+    // Determinar clase silenciada (alarm1-silenced o alarm2-silenced)
+    // Extraemos la base de la clase (alarm1 o alarm2)
+    const baseClass = item.className.includes('alarm1') ? 'alarm1' : 'alarm2';
+    const silencedClass = baseClass + '-silenced';
+    
+    items.update({
+        id: itemId,
+        className: silencedClass,
+        title: item.title + ' - <?php echo xlt("SILENCED"); ?>'
+    });
+    
+    updateAlarmCounter();
+    showNotification('<?php echo xlt("Alarm silenced"); ?>', 'success');
+}
+
+// Silenciar todas las alarmas activas
+function silenceAllAlarms() {
+    const alarmIds = Object.keys(activeAlarms);
+    
+    if (alarmIds.length === 0) {
+        showNotification('<?php echo xlt("No active alarms"); ?>', 'info');
+        return;
+    }
+    
+    // Clonar los IDs para evitar problemas al eliminar mientras iteramos
+    [...alarmIds].forEach(silenceAlarm);
+    showNotification(`<?php echo xlt("Silenced"); ?> ${alarmIds.length} <?php echo xlt("alarms"); ?>`, 'success');
+}
+
+// Verificar alarmas que deberían estar sonando (según el tiempo actual)
+function checkPendingAlarms() {
+    const now = new Date().getTime();
+    
+    var allItems = items.get({
+        filter: function(item) {
+            // Filtrar solo items de alarma que no estén silenciados ya
+            return item.className && 
+                   (item.className.includes('alarm1') || item.className.includes('alarm2')) &&
+                   !item.className.includes('silenced');
+        }
+    });
+    
+    allItems.forEach(function(item) {
+        const alarmTime = new Date(item.start).getTime();
+        const timeDiff = now - alarmTime;
+        
+        // Si ha pasado el tiempo de la alarma y es reciente (menos de 2 mins)
+        if (timeDiff > 0 && timeDiff < 120000 && !activeAlarms[item.id]) {
+            const alarmType = item.className.includes('alarm1') ? 'alarm1' : 'alarm2';
+            console.log('[checkPending] Auto-triggering:', item.id);
+            triggerAlarmForItem(item.id, alarmType);
+        }
+    });
+}
+
+// Actualizar el contador visual de alarmas activas
+function updateAlarmCounter() {
+    const count = Object.keys(activeAlarms).length;
+    const statusDiv = document.getElementById('alarmStatus');
+    const countSpan = document.getElementById('activeAlarmCount');
+    
+    if (count > 0) {
+        statusDiv.style.display = 'block';
+        countSpan.textContent = count;
+    } else {
+        statusDiv.style.display = 'none';
+    }
+}
+
+// Notificaciones tipo Toast (simplificado)
+function showNotification(message, type = 'info') {
+    const colors = {
+        'success': '#4caf50',
+        'warning': '#ff9800',
+        'error': '#f44336',
+        'info': '#2196f3'
+    };
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed; bottom: 20px; right: 20px;
+        background-color: ${colors[type]}; color: white;
+        padding: 15px 25px; border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000; font-size: 16px;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// Reactivar una alarma silenciada
+function reactivateAlarm(itemId) {
+    console.log('[reactivateAlarm] Reactivating:', itemId);
+    
+    var item = items.get(itemId);
+    if (!item) {
+        console.error('[reactivateAlarm] Item not found!');
+        return;
+    }
+    
+    // Verificar si está silenciada (clase contiene -silenced)
+    if (!item.className.includes('-silenced')) {
+        console.log('[reactivateAlarm] Not silenced');
+        return;
+    }
+    
+    // Determinar tipo de alarma original (alarm1 o alarm2)
+    const alarmType = item.className.includes('alarm1') ? 'alarm1' : 'alarm2';
+    
+    // Restaurar clase original (quitar -silenced y volver a poner la base)
+    // Pero triggerAlarmForItem volverá a poner 'blinking'
+    items.update({
+        id: itemId,
+        className: alarmType,
+        title: item.title.replace(' - <?php echo xlt("SILENCED"); ?>', '')
+    });
+    
+    // Reactivar alarma (sonido y parpadeo)
+    triggerAlarmForItem(itemId, alarmType);
+    
+    showNotification('<?php echo xlt("Alarm reactivated"); ?>', 'warning');
+}
 
         <?php
         //$event_id = 1; // Identificador único para cada evento
         $addedGroups = array(); // Rastrea los grupos ya añadidos
         
+        echo "console.log('Starting to process schedules...');\n";
         while ($row = sqlFetchArray($result)) {
+            echo "console.log('Processing schedule_id: " . $row['schedule_id'] . "');\n";
             $prescription_id = $row['prescription_id'];
             $patient_full_name = $row['patient_full_name'];
             $user_full_name = $row['user_full_name'];
@@ -261,6 +555,9 @@ $result = sqlStatement($sql_query);
             $alarm1_datetime_js = !empty($alarm1_datetime) ? date('Y-m-d\TH:i:s', strtotime($alarm1_datetime)) : '';
             $alarm2_datetime_js = !empty($alarm2_datetime) ? date('Y-m-d\TH:i:s', strtotime($alarm2_datetime)) : '';
             
+            // Obtener timestamp actual para comparar alarmas
+            $current_time_unix = time();
+             
             // Verificar si la función wrapText no ha sido definida antes de declararla
             if (!function_exists('wrapText')) {
                 function wrapText($text, $maxLength = 65) {
@@ -310,6 +607,9 @@ $result = sqlStatement($sql_query);
                     // Formatear la hora a AM/PM
                     $title = addslashes(xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} " . xlt('by') . " $user_full_name " . xlt('at') . " $formatted_hour_supply");
                     $color = 'background-color: blue; color: white;'; // Color azul si está confirmado
+                } elseif ($dose_status === 'Suspended') {
+                    $title = addslashes(xlt('Dose') . "# {$dose_number}/{$max_dose} - SUSPENDED");
+                    $color = 'background-color: #6c757d; color: white; text-decoration: line-through;';
                 } else {
                     $title = addslashes($formatted_hour . ' ' . xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} - {$medications_text}");
                     $color = ''; // Sin estilo adicional para otros estados
@@ -329,53 +629,55 @@ $result = sqlStatement($sql_query);
 
             // Solo agregar las alarmas si $dose_status no es 'Confirmed'
             if ($dose_status !== 'Confirmed') {
+                echo "console.log('Processing alarms for dose $supply_id, status: $dose_status');\n";
+                
                 // Procesar alarma 1 si está activa
                 if ($alarm1_datetime_js && $alarm1_active == 1) {
                     $alarm1_formatted = $alarm1_datetime ? oeTimestampFormatDateTime(strtotime($alarm1_datetime)) : '';
                     $event_alarm1_id = 'alarm_' . $supply_id . '_1';
-            
-                    // Verificar si la alarma ya debería haber sonado
-                    if (strtotime($alarm1_datetime) <= $current_time_unix) {
-                        echo "triggerAlarm('$event_alarm1_id', 'alarm1');\n";
-                    }
-            
+                    
                     // Agregar al timeline
                     echo "items.add({
                         id: '$event_alarm1_id',
-                        content: '', 
+                        content: '<i class=\"fas fa-bell\"></i>', 
                         start: '$alarm1_datetime_js', 
                         group: 'group_$schedule_id', 
                         className: 'alarm1', 
-                        title: '" . xlt('Alarm 1') . " - $event_alarm1_id: $alarm1_formatted', 
+                        title: '" . xlt('Alarm 1') . ": $alarm1_formatted', 
                     });\n";
+                    
+                    // Verificar si debe activarse inmediatamente
+                    if (strtotime($alarm1_datetime) <= $current_time_unix) {
+                        echo "pendingAlarms.push({id: '$event_alarm1_id', type: 'alarm1'});\n";
+                    }
                 }
-            
+
                 // Procesar alarma 2 si está activa
                 if ($alarm2_datetime_js && $alarm2_active == 1) {
                     $alarm2_formatted = $alarm2_datetime ? oeTimestampFormatDateTime(strtotime($alarm2_datetime)) : '';
                     $event_alarm2_id = 'alarm_' . $supply_id . '_2';
-            
-                    // Verificar si la alarma ya debería haber sonado
-                    if (strtotime($alarm2_datetime) <= $current_time_unix) {
-                        echo "triggerAlarm('$event_alarm2_id', 'alarm2');\n";
-                    }
-            
+                    
                     // Agregar al timeline
                     echo "items.add({
                         id: '$event_alarm2_id',
-                        content: '', 
+                        content: '<i class=\"fas fa-bell\"></i><i class=\"fas fa-bell\"></i>', 
                         start: '$alarm2_datetime_js', 
                         group: 'group_$schedule_id', 
                         className: 'alarm2', 
-                        title: '" . xlt('Alarm 2') . " - $event_alarm2_id: $alarm2_formatted', 
+                        title: '" . xlt('Alarm 2') . ": $alarm2_formatted', 
                     });\n";
+                    
+                    // Verificar si debe activarse inmediatamente
+                    if (strtotime($alarm2_datetime) <= $current_time_unix) {
+                        echo "pendingAlarms.push({id: '$event_alarm2_id', type: 'alarm2'});\n";
+                    }
                 }
             }
-        }
+        } // Cerrar el while
 
         ?>
-        // Crear la instancia del timeline
-        var container = document.getElementById('visualization');
+
+        // Actualizar opciones del timeline para mostrar tooltip personalizado
         var options = {
             start: start,
             end: end,
@@ -384,17 +686,53 @@ $result = sqlStatement($sql_query);
             horizontalScroll: true,
             zoomMin: 1000 * 60 * 30,
             zoomMax: 1000 * 60 * 60 * 24 * 7,
+            selectable: true,  // Habilitar selección de items
+            multiselect: false, // Solo seleccionar un item a la vez
             timeAxis: {
                 scale: 'minute',
                 step: 60
             },
             tooltip: {
-                followMouse: true, // Si deseas que el tooltip siga al ratón
-                overflowMethod: 'cap' // Método de manejo de desbordamiento
+                followMouse: true,
+                overflowMethod: 'cap'
+            },
+            template: function(item) {
+                // Agregar instrucción para alarmas
+                if (item.id && item.id.startsWith('alarm_')) {
+                    return item.title + '<br><small><i><?php echo xlt("Click to silence"); ?></i></small>';
+                }
+                return item.title;
             }
         };
 
         var timeline = new vis.Timeline(container, items, groups, options);
+
+        // Procesar alarmas pendientes DESPUÉS de que el timeline esté listo
+        timeline.on('changed', function() {
+            // Solo ejecutar una vez
+            if (timeline._initialized) return;
+            timeline._initialized = true;
+            
+            console.log('Timeline initialized, processing pending alarms:', pendingAlarms);
+            
+            setTimeout(function() {
+                pendingAlarms.forEach(function(alarm) {
+                    console.log('Activating pending alarm:', alarm);
+                    triggerAlarmForItem(alarm.id, alarm.type);
+                });
+                
+                // Iniciar verificación periódica de alarmas cada 30 segundos
+                alarmCheckInterval = setInterval(checkPendingAlarms, 30000);
+            }, 1000);
+        });
+
+        // Limpiar alarmas al cerrar/recargar página
+        window.addEventListener('beforeunload', function() {
+            Object.keys(activeAlarms).forEach(stopAlarm);
+            if (alarmCheckInterval) {
+                clearInterval(alarmCheckInterval);
+            }
+        });
 
         // Ajustar la escala al hacer zoom
         timeline.on('rangechange', function (properties) {
@@ -416,102 +754,336 @@ $result = sqlStatement($sql_query);
                 });
             }
         });
-        // Función para abrir el modal en Bootstrap 5
+        
+        // ==========================================
+        // FUNCIONES PARA MODALES (CONSOLIDADAS)
+        // ==========================================
+
+        // Función para abrir el modal principal de MAR
         function openMarActionsModal(supplyId, scheduleId) {
-            // Aquí cargas dinámicamente el contenido del modal (ya lo estás haciendo con AJAX)
+            console.log('[openMarActionsModal] Opening for supply_id:', supplyId, 'schedule_id:', scheduleId);
+
+            const modalEl = document.getElementById('marActionsModal');
+            if (!modalEl) {
+                console.error('[openMarActionsModal] Modal element not found!');
+                return;
+            }
+            
+            // Cargar spinner
+            modalEl.querySelector('.modal-body').innerHTML = `
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3"><?php echo xlt('Loading dose information...'); ?></p>
+                </div>
+            `;
+            
+            // Crear/obtener instancia del modal
+            let marModal = bootstrap.Modal.getInstance(modalEl);
+            if (!marModal) {
+                marModal = new bootstrap.Modal(modalEl, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+            }
+            
+            // Mostrar modal inmediatamente con spinner
+            marModal.show();
+            
+            // Cargar contenido vía AJAX
             $.ajax({
-                url: 'modal_mar_actions.php',
+                url: '<?php echo $GLOBALS['webroot']; ?>/inpatient/plan/mar/modal_mar_actions.php',
                 method: 'GET',
                 data: {
-                    action: 'get_dose_details',
                     supply_id: supplyId,
                     schedule_id: scheduleId
                 },
                 success: function(response) {
-                    // Mostrar la respuesta en el modal
-                    $('#marActionsModal .modal-body').html(response);  // Aquí llenas el contenido dinámicamente
-                    // Crear una instancia del modal y mostrarlo
-                    var myModal = new bootstrap.Modal(document.getElementById('marActionsModal'));
-                    myModal.show();  // Mostrar el modal
+                    console.log('[openMarActionsModal] Content loaded successfully');
+                    modalEl.querySelector('.modal-body').innerHTML = response;
                 },
                 error: function(xhr, status, error) {
-                    console.log("Error AJAX:", error);
+                    console.error('[openMarActionsModal] AJAX error:', error);
+                    modalEl.querySelector('.modal-body').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong><?php echo xlt('Error loading data'); ?>:</strong> ${error}
+                        </div>
+                    `;
                 }
             });
         }
 
-        $(document).ready(function() {
-            timeline.on('click', function (properties) {
-                var itemId = properties.item;
-                if (itemId && itemId.startsWith('main_event_')) {
-                    var parts = itemId.split('_');
-                    var supplyId = parts[2];
-                    var scheduleId = parts[3];
-                    // Llamar a la función solo si ambos IDs existen
-                    if (supplyId && scheduleId) {
-                        openMarActionsModal(supplyId, scheduleId);
-                    } else {
-                        console.error("Error: supplyId o scheduleId no están definidos.");
-                    }
+        // Función para cerrar el modal principal
+        function closeMarModal() {
+            const modalEl = document.getElementById('marActionsModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
                 }
-            });
-        });
-
-        document.addEventListener("DOMContentLoaded", function () {
-            // Función para reproducir sonido
-            function playAlarmSound(alarmType) {
-                const soundMap = {
-                    'alarm1': '../sounds/alarm1.mp3',
-                    'alarm2': '../sounds/alarm2.mp3'
-                };
-
-                const sound = new Audio(soundMap[alarmType]);
-                sound.loop = true; // Hacer que el sonido se repita
-                sound.play();
-
-                // Retornar el objeto Audio para controlarlo después
-                return sound;
             }
+        }
 
-            // Función para manejar el parpadeo y sonido de la alarma
-            function triggerAlarm(eventId, alarmType) {
-                const element = document.getElementById(eventId);
-
-                if (!element) {
-                    console.error(`Elemento con ID ${eventId} no encontrado.`);
-                    return;
-                }
-
-                // Añadir clase de parpadeo
-                element.classList.add('blinking');
-
-                // Reproducir sonido
-                const alarmSound = playAlarmSound(alarmType);
-
-                // Detener parpadeo y sonido después de 2 minutos
-                setTimeout(() => {
-                    element.classList.remove('blinking'); // Quitar parpadeo
-                    alarmSound.pause(); // Detener sonido
-                    alarmSound.currentTime = 0; // Reiniciar sonido
-                }, 120000); // 2 minutos
-            }
-        
-        });
-
+        // ==========================================
+        // FUNCIÓN: CONFIRMAR DOSIS
+        // ==========================================
         function confirmDose(supplyId) {
+            console.log('[confirmDose] Opening confirmation for supply_id:', supplyId);
+            
+            const marModalEl = document.getElementById('marActionsModal');
+            
+            // Cargar formulario de confirmación en el mismo modal
             $.ajax({
                 url: 'modal_confirm_dose.php',
                 type: 'POST',
                 data: { supply_id: supplyId },
                 success: function(response) {
-                    // Cargar el contenido en el modal principal de mar.php
-                    $('#marActionsModal .modal-body').html(response);
+                    console.log('[confirmDose] Form loaded');
+                    marModalEl.querySelector('.modal-body').innerHTML = response;
+                    marModalEl.querySelector('.modal-title').textContent = '<?php echo xlt("Confirm Dose"); ?>';
                 },
-                error: function() {
-                    alert('Error loading confirmation modal.');
+                error: function(xhr, status, error) {
+                    console.error('[confirmDose] Error:', error);
+                    alert('<?php echo xlt("Error loading confirmation form"); ?>');
                 }
             });
         }
+
+        // ==========================================
+        // FUNCIÓN: AJUSTAR SCHEDULE
+        // ==========================================
+        function adjustSchedule(scheduleId) {
+            console.log('[adjustSchedule] Opening for schedule_id:', scheduleId);
+            
+            // Ocultar modal principal (sin destruir)
+            const marModalEl = document.getElementById('marActionsModal');
+            const marModalInstance = bootstrap.Modal.getInstance(marModalEl);
+            if (marModalInstance) {
+                marModalInstance.hide();
+            }
+            
+            // Limpiar contenedor dinámico
+            $('#dynamicModalContainer').empty();
+            
+            // Cargar modal de edición
+            $.ajax({
+                url: 'modal_order_edit.php',
+                type: 'GET',
+                data: { schedule_id: scheduleId },
+                success: function(response) {
+                    $('#dynamicModalContainer').html(response);
+                    
+                    const editModalEl = document.getElementById('editScheduleModal');
+                    if (editModalEl) {
+                        const editModal = new bootstrap.Modal(editModalEl, {
+                            backdrop: 'static',
+                            keyboard: true
+                        });
+                        
+                        // Limpiar al cerrar
+                        editModalEl.addEventListener('hidden.bs.modal', function() {
+                            $('#dynamicModalContainer').empty();
+                            
+                            // Opcional: reabrir modal principal
+                            // if (marModalInstance) marModalInstance.show();
+                        }, { once: true });
+                        
+                        editModal.show();
+                    } else {
+                        console.error('[adjustSchedule] editScheduleModal not found in response');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[adjustSchedule] Error:', error);
+                    alert('<?php echo xlt("Error loading edit modal"); ?>');
+                }
+            });
+        }
+
+        // ==========================================
+        // FUNCIÓN: SUSPENDER SCHEDULE
+        // ==========================================
+        function suspendSchedule(scheduleId) {
+            console.log('[suspendSchedule] Opening for schedule_id:', scheduleId);
+            
+            // Ocultar modal principal
+            const marModalEl = document.getElementById('marActionsModal');
+            const marModalInstance = bootstrap.Modal.getInstance(marModalEl);
+            if (marModalInstance) {
+                marModalInstance.hide();
+            }
+            
+            // Limpiar contenedor dinámico
+            $('#dynamicModalContainer').empty();
+            
+            // Cargar modal de suspensión
+            $.ajax({
+                url: 'modal_order_suspend.php',
+                type: 'GET',
+                data: { schedule_id: scheduleId },
+                success: function(response) {
+                    $('#dynamicModalContainer').html(response);
+                    
+                    const suspendModalEl = document.getElementById('suspendScheduleModal');
+                    if (suspendModalEl) {
+                        const suspendModal = new bootstrap.Modal(suspendModalEl, {
+                            backdrop: 'static',
+                            keyboard: true
+                        });
+                        
+                        // Limpiar al cerrar
+                        suspendModalEl.addEventListener('hidden.bs.modal', function() {
+                            $('#dynamicModalContainer').empty();
+                        }, { once: true });
+                        
+                        suspendModal.show();
+                    } else {
+                        console.error('[suspendSchedule] suspendScheduleModal not found in response');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[suspendSchedule] Error:', error);
+                    alert('<?php echo xlt("Error loading suspend modal"); ?>');
+                }
+            });
+        }
+
+        // ==========================================
+        // FUNCIÓN: VER HISTORIAL DE DOSIS
+        // ==========================================
+        function viewDoseHistory(scheduleId) {
+            console.log('[viewDoseHistory] Opening for schedule_id:', scheduleId);
+            
+            $.ajax({
+                url: 'modal_dose_history.php',
+                method: 'GET',
+                data: { schedule_id: scheduleId },
+                success: function(response) {
+                    // Crear modal si no existe
+                    if (!$('#doseHistoryModal').length) {
+                        $('body').append(`
+                            <div class="modal fade" id="doseHistoryModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-info text-white">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-history"></i> <?php echo xlt("Dose History"); ?>
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body"></div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                <?php echo xlt("Close"); ?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                    
+                    // Actualizar contenido y mostrar
+                    $('#doseHistoryModal .modal-body').html(response);
+                    const historyModal = new bootstrap.Modal(document.getElementById('doseHistoryModal'));
+                    historyModal.show();
+                },
+                error: function(xhr, status, error) {
+                    console.error('[viewDoseHistory] Error:', error);
+                    alert('<?php echo xlt("Error loading dose history"); ?>');
+                }
+            });
+        }
+
+        // ==========================================
+        // FUNCIÓN: REGISTRAR REACCIONES Y EFECTIVIDAD
+        // ==========================================
+        function registerReactions(supplyId, scheduleId) {
+            console.log('[registerReactions] Opening for supply_id:', supplyId, 'schedule_id:', scheduleId);
+            
+            $.ajax({
+                url: 'modal_reactions_effectiveness.php',
+                method: 'GET',
+                data: {
+                    supply_id: supplyId,
+                    schedule_id: scheduleId
+                },
+                success: function(response) {
+                    // Crear modal si no existe
+                    if (!$('#reactionsModal').length) {
+                        $('body').append(`
+                            <div class="modal fade" id="reactionsModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-warning">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-exclamation-triangle"></i> <?php echo xlt("Register Reactions & Effectiveness"); ?>
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                    
+                    // Actualizar contenido y mostrar
+                    $('#reactionsModal .modal-body').html(response);
+                    const reactionsModal = new bootstrap.Modal(document.getElementById('reactionsModal'));
+                    reactionsModal.show();
+                },
+                error: function(xhr, status, error) {
+                    console.error('[registerReactions] Error:', error);
+                    alert('<?php echo xlt("Error loading reactions form"); ?>');
+                }
+            });
+        }
+
+        // Usar 'select' en lugar de 'click' para mejor compatibilidad con Vis.js
+        timeline.on('select', function (properties) {
+            console.log('[timeline select] Event triggered:', properties);
+            
+            var itemId = properties.items[0]; // En 'select', los items están en un array
+            
+            if (!itemId) {
+                console.log('No item selected');
+                return;
+            }
+            
+            console.log('Selected item:', itemId);
+            
+            // CASO 1: Click en ALARMA
+            if (itemId.startsWith('alarm_')) {
+                console.log('Alarm selected, silencing...');
+                silenceAlarm(itemId);
+            } 
+            // CASO 2: Click en DOSIS (main_event)
+            else if (itemId.startsWith('main_event_')) {
+                var parts = itemId.split('_');
+                var supplyId = parts[2];
+                var scheduleId = parts[3];
+
+                if (supplyId && scheduleId) {
+                    console.log('Opening modal for dose:', supplyId, scheduleId);
+                    // Pequeña pausa para asegurar que Vis.js libere el foco
+                    setTimeout(function() {
+                        openMarActionsModal(supplyId, scheduleId);
+                    }, 50);
+                } else {
+                    console.error("Error: supplyId o scheduleId no están definidos.");
+                }
+            }
+            // CASO 3: Otros items
+            else {
+                console.log('Unknown item type:', itemId);
+            }
+            
+            // Deseleccionar el item para permitir volver a hacer clic
+            timeline.setSelection([]);
+        });
 
         $(document).ready(function () {
         // Cuando se seleccione una Facility
@@ -549,23 +1121,6 @@ $result = sqlStatement($sql_query);
                 }
             });
         });
-
-        function adjustSchedule(scheduleId) {
-            $.ajax({
-                url: 'modal_order_edit.php',
-                type: 'GET',
-                data: { schedule_id: scheduleId },
-                success: function(response) {
-                    // Insertar el contenido dinámico en el modal
-                    $('#dynamicModalContainer').html(response);
-                    var editModal = new bootstrap.Modal(document.getElementById('editScheduleModal'));
-                    editModal.show();
-                },
-                error: function() {
-                    alert('Error loading the edit schedule modal.');
-                }
-            });
-        }
 
         $(document).ready(function() {
             $('#closeModalButton').click(function() {
@@ -698,21 +1253,26 @@ $result = sqlStatement($sql_query);
 
     </script>
 
-    <?php include 'modal_order_new_medication.php'; ?>
-
-<!-- Modal de dosis (marActionsModal) -->
-<div class="modal fade" id="marActionsModal" tabindex="-1" aria-labelledby="marActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><?php echo xlt("Dose Administration for Patient"); ?></h5>
-            </div>
-            <div class="modal-body">
-                <!-- Content loaded via AJAX -->
+    <!-- Modal principal de dosis -->
+    <div class="modal fade" id="marActionsModal" tabindex="-1" aria-labelledby="marActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="marActionsModalLabel">
+                        <i class="fas fa-pills"></i> <?php echo xlt("Dose Administration"); ?>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?php echo xlt('Close'); ?>"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Contenido cargado vía AJAX -->
+                </div>
             </div>
         </div>
     </div>
-</div>
-<div id="dynamicModalContainer"></div>
+
+    <!-- Contenedor para modales dinámicos (edit, suspend, etc.) -->
+    <div id="dynamicModalContainer"></div>
+
+    <?php include 'modal_order_new_medication.php'; ?>
 </body>
 </html>

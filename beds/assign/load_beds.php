@@ -98,6 +98,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
+// ==========================================
+// MANEJO DE ACCIÓN SET TO CLEANING
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'set_to_cleaning') {
+    $bedId = intval($_POST['bed_id']);
+
+    try {
+        // Verificar que no haya paciente asignado a esta cama
+        $checkQuery = "SELECT id FROM beds_patients
+                      WHERE current_bed_id = ?
+                      AND status IN ('preadmitted', 'admitted')
+                      LIMIT 1";
+        $hasPatient = sqlQuery($checkQuery, [$bedId]);
+
+        if ($hasPatient) {
+            throw new Exception("Cannot set to cleaning - bed is currently assigned to a patient");
+        }
+
+        // Marcar cama como cleaning
+        insertBedStatusLog($bedId, 'cleaning', $userId, null, 'Bed set to cleaning state');
+
+        // Mensaje de éxito
+        $_SESSION['success_message'] = xlt('Bed successfully set to cleaning state');
+
+    } catch (Exception $e) {
+        $_SESSION['error_message'] = $e->getMessage();
+    }
+
+    // Recargar la página para reflejar cambios
+    header("Location: " . $_SERVER['REQUEST_URI']);
+    exit;
+}
+
 // Obtener datos del cuarto, unidad y camas
 $query = "SELECT r.*, u.unit_name, lo.title AS floor_title, ls.title AS sector_title FROM rooms AS r 
           LEFT JOIN units AS u ON r.unit_id = u.id 
@@ -287,16 +320,16 @@ $additional_info = [
                         </div>
 
                         <!-- Información del paciente ocupando la cama -->
-                        <?php if (in_array('Occupied', array_column($bedPatient['conditions'], 'title')) || in_array('Reserved', array_column($bedPatient['conditions'], 'title'))): ?>
+                        <?php if (in_array('occupied', array_column($bedPatient['conditions'], 'key')) || in_array('reserved', array_column($bedPatient['conditions'], 'key'))): ?>
                             <div class="patient-info d-flex justify-content-between">
                                 <span class="patient-detail fw-bold"><?= xl($bedPatient['bed_patient_sex']) ?></span>
                                 <span class="patient-detail fw-bold"><?= htmlspecialchars($bedPatient['bed_patient_age']) ?> <?php echo xl('years'); ?></span>
                                 <span class="patient-detail fw-bold"><?= htmlspecialchars($bedPatient['bed_patient_insurance_name']) ?></span>
                             </div>
 
-                            <?php 
-                                $conditions = array_column($bedPatient['conditions'], 'title'); 
-                                $startText = in_array('Occupied', $conditions) ? xlt('Start') : (in_array('Reserved', $conditions) ? xlt('Since') : '');
+                            <?php
+                                $conditions = array_column($bedPatient['conditions'], 'key');
+                                $startText = in_array('occupied', $conditions) ? xlt('Start') : (in_array('reserved', $conditions) ? xlt('Since') : '');
                             ?>
                             <div class="assignment-info d-flex justify-content-between mt-2">
                                 <span class="assign-detail fw-bold">
@@ -332,6 +365,12 @@ $additional_info = [
                                 <button id="reserveBtn" type="button" class="btn btn-secondary" onclick="checkPatientSelected('reserve', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
                                     <?php echo xlt('Reserve'); ?>
                                 </button>
+                            <?php elseif ($bedAction === 'BedManagement'): ?>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="set_to_cleaning">
+                                    <input type="hidden" name="bed_id" value="<?php echo htmlspecialchars($bedPatient['bed_id']); ?>">
+                                    <button type="submit" class="btn btn-info"><?php echo xlt('Set to Cleaning'); ?></button>
+                                </form>
                             <?php endif; ?>
 
                         <?php elseif (in_array('reserved', $conditions)): ?>
@@ -343,10 +382,17 @@ $additional_info = [
                                     <?php echo xlt('Info'); ?>
                                 </button>
                             <?php elseif ($bedAction === 'Assign'): ?>
-                                <button id="assignBtn" type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
+                                <button id="assignBtn" type="button" class="btn btn-primary" onclick="assignReservedPatient('<?php echo htmlspecialchars($bedPatient['id']); ?>', '<?php echo htmlspecialchars($bedPatient['bed_patient_id']); ?>', '<?php echo htmlspecialchars(addslashes($bedPatient['bed_patient_name'])); ?>')">
                                     <?php echo xlt('Assign'); ?>
                                 </button>
                                 <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalBedRelease<?= $bedPatient['id'] ?>">
+                                    <?php echo xlt('Release'); ?>
+                                </button>
+                                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#reserveInfoModal<?= $bedPatient['id'] ?>">
+                                    <?php echo xlt('Info'); ?>
+                                </button>
+                            <?php elseif ($bedAction === 'BedManagement'): ?>
+                                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalBedRelease<?= $bedPatient['id'] ?>">
                                     <?php echo xlt('Release'); ?>
                                 </button>
                                 <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#reserveInfoModal<?= $bedPatient['id'] ?>">
@@ -367,30 +413,34 @@ $additional_info = [
                                         <input type="hidden" name="bed_id" value="<?php echo htmlspecialchars($bedPatient['bed_id']); ?>">
                                         <button type="submit" class="btn btn-success"><?php echo xlt('Made Up'); ?></button>
                                     </form>
+
+                                    <!-- No se deben mostrar Assign ni Reserve en camas de limpieza -->
                                     
-                                    <?php if ($bedAction === 'Assign'): ?>
-                                        <button type="button" class="btn btn-primary" onclick="checkPatientSelected('assign', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
-                                            <?php echo xlt('Assign'); ?>
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" onclick="checkPatientSelected('reserve', '<?php echo htmlspecialchars($bedPatient['id']); ?>')">
-                                            <?php echo xlt('Reserve'); ?>
+                                    <?php if ($bedAction === 'BedManagement'): ?>
+                                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalBedRelease<?= $bedPatient['id'] ?>">
+                                            <?php echo xlt('Release'); ?>
                                         </button>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
 
                         <?php elseif (in_array('occupied', $conditions)): ?>
-                            <?php if ($bedAction === 'Management'): ?>
+                            <?php if ($bedAction === 'Management' || $bedAction === 'Assign'): ?>
                                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDischargePatient<?= $bedPatient['id'] ?>">
                                     <?php echo xlt('Discharge'); ?>
                                 </button>
                                 <a href="assign_bed.php?from_id_beds_patients=<?= urlencode(trim($bedPatient['bp_id'])) ?>&patient_id_relocate=<?= urlencode(trim($bedPatient['bed_patient_id'])) ?>&patient_name_relocate=<?= urlencode(trim($bedPatient['bed_patient_name'])) ?>&patient_dni_relocate=<?= urlencode(trim($bedPatient['bed_patient_dni'])) ?>&patient_age_relocate=<?= urlencode(trim($bedPatient['bed_patient_age'])) ?>&patient_sex_relocate=<?= urlencode(trim($bedPatient['bed_patient_sex'])) ?>&insurance_name_relocate=<?= urlencode(trim($bedPatient['bed_patient_insurance_name'])) ?>&from_bed_id=<?= urlencode(trim($bedPatient['id'])) ?>&from_room_id=<?= urlencode(trim($roomId)) ?>&from_unit_id=<?= urlencode(trim($unitId)) ?>&from_facility_id=<?= urlencode(trim($facilityId)) ?>&bed_action=Relocation" class="btn btn-light">
-                                    <?php echo xlt('Relocate'); ?>
+                                    <?php echo xlt('Transfer'); ?>
                                 </a>
+                                
+                                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#patientInfoModal<?= $bedPatient['id'] ?>">
+                                    <?php echo xlt('Info'); ?>
+                                </button>
+                            <?php elseif ($bedAction === 'BedManagement'): ?>
+                                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#patientInfoModal<?= $bedPatient['id'] ?>">
+                                    <?php echo xlt('Info'); ?>
+                                </button>
                             <?php endif; ?>
-                            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#patientInfoModal<?= $bedPatient['id'] ?>">
-                                <?php echo xlt('Info'); ?>
-                            </button>
                         <?php endif; ?>
 
                         <!-- Incluyendo los modales -->
@@ -429,11 +479,20 @@ $additional_info = [
         <p><?php echo xl('No beds available in this room.'); ?></p>
     <?php endif; ?>
 
-    <a href="assign_bed.php?view=rooms&facility_id=<?= htmlspecialchars($context['facility_id']) ?>&unit_id=<?= htmlspecialchars($context['unit_id']) ?>&bed_action=<?= htmlspecialchars($bedAction) ?>&from_id_beds_patients=<?= htmlspecialchars($fromIdBedsPatients ?? '') ?>&patient_id_relocate=<?= htmlspecialchars($patientData['id'] ?? '') ?>&patient_name_relocate=<?= htmlspecialchars($patientData['name'] ?? '') ?>" class="btn btn-secondary mt-3">
-        <i class="fas fa-arrow-left"></i> <?= xlt('Back to Rooms'); ?>
-    </a>
-    
-    <a href="assign.php" class="btn btn-primary mt-3 ms-2">
+    <?php
+    // Verificar si se accedió directamente desde el panel principal (assign.php) debido a que el paciente
+    // ya tiene una cama asignada o reservada
+    $cameFromDirectAccess = isset($_GET['patient_id_relocate']) || (isset($_GET['patient_id']) && !isset($_GET['view']));
+    $isBedManagement = $bedAction === 'BedManagement';
+    ?>
+
+    <?php if (!$cameFromDirectAccess || $isBedManagement): ?>
+        <a href="assign_bed.php?view=rooms&facility_id=<?= htmlspecialchars($context['facility_id']) ?>&facility_name=<?= htmlspecialchars($context['facility_name']) ?>&unit_id=<?= htmlspecialchars($context['unit_id']) ?>&unit_name=<?= htmlspecialchars($context['unit_name']) ?>&bed_action=<?= htmlspecialchars($bedAction) ?>&from_id_beds_patients=<?= htmlspecialchars($fromIdBedsPatients ?? '') ?>&patient_id_relocate=<?= htmlspecialchars($patientData['id'] ?? '') ?>&patient_name_relocate=<?= htmlspecialchars($patientData['name'] ?? '') ?>" class="btn btn-secondary mt-3">
+            <i class="fas fa-arrow-left"></i> <?= xlt('Back to Rooms'); ?>
+        </a>
+    <?php endif; ?>
+
+    <a href="assign.php" class="btn btn-primary mt-3 <?php echo ($cameFromDirectAccess || $isBedManagement) ? '' : 'ms-2'; ?>">
         <i class="fas fa-home"></i> <?= xlt('Principal Board'); ?>
     </a>
 </div>
@@ -473,6 +532,33 @@ function checkPatientSelected(actionType, bedId) {
             alert("<?php echo xlt('Error verifying patient status.'); ?>");
         });
 }
+
+    // Función para asignar una cama reservada al paciente que ya tiene la reserva
+    function assignReservedPatient(bedId, reservedPatientId, reservedPatientName) {
+        // Verificar si el paciente actual coincide con el paciente reservado
+        const currentPatientId = "<?php echo htmlspecialchars($patientData['id'] ?? ''); ?>";
+        const currentPatientName = "<?php echo htmlspecialchars($patientData['name'] ?? ''); ?>";
+
+        if (currentPatientId && currentPatientId !== reservedPatientId) {
+            // Si el paciente actual no es el que tiene la reserva, pedir confirmación
+            const confirmMessage = "<?php echo xl('Are you sure you want to assign this bed?\\n\\nThe bed is reserved for: ') ?>" + 
+                                 reservedPatientName + 
+                                 "<?php echo xl('\\nCurrent patient: ') ?>" + 
+                                 currentPatientName;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+        }
+
+        // Mostrar el modal de asignación para el paciente que tiene la reserva
+        const modalId = `#assignBedPatientModal${bedId}`;
+        const modalElement = document.querySelector(modalId);
+        if (modalElement) {
+            new bootstrap.Modal(modalElement).show();
+        } else {
+            alert("<?php echo xlt('Error: Modal not found for this bed.'); ?>");
+        }
+    }
 </script>
 </body>
 </html>
