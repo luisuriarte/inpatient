@@ -131,7 +131,11 @@ CREATE TABLE `prescriptions_schedule` (
   `version` int(11) NOT NULL DEFAULT 1,
   `previous_schedule_id` int(11) DEFAULT NULL,
   `root_schedule_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`schedule_id`)
+  `active` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`schedule_id`),
+  KEY `idx_schedule_prescription` (`prescription_id`),
+  KEY `idx_schedule_patient` (`patient_id`),
+  KEY `idx_schedule_prescription_active` (`prescription_id`,`active`)
 ) ENGINE=InnoDB AUTO_INCREMENT=143 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `prescriptions_supply` (
@@ -162,7 +166,7 @@ CREATE TABLE `prescriptions_supply` (
   `modified_by` int(11) DEFAULT NULL,
   `creation_datetime` datetime DEFAULT NULL,
   PRIMARY KEY (`supply_id`) USING BTREE,
-  KEY `fk_supply_schedule` (`schedule_id`),
+  KEY `idx_supply_schedule_status_date` (`schedule_id`,`status`,`schedule_datetime`),
   CONSTRAINT `fk_supply_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `prescriptions_schedule` (`schedule_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=466 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
