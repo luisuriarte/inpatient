@@ -210,15 +210,12 @@ $result = sqlStatement($sql_query);
         <div id="alarmStatus" style="position: fixed; top: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 8px; display: none;">
             <i class="fas fa-bell"></i> 
             <span id="activeAlarmCount">0</span> <?php echo xlt('active alarms'); ?>
-            <button class="btn btn-sm btn-warning ms-2" onclick="silenceAllAlarms()">
-                <i class="fas fa-volume-mute"></i> <?php echo xlt('Silence All'); ?>
-            </button>
         </div>
     </form>
 
     <h1><?php echo xl('Medical Administration Record MAR') ; ?></h1>
         <div id="visualization"></div>
-        <div class="text-right mt-3">
+        <div class="d-flex justify-content-between mt-3">
             <button type="button" class="btn btn-secondary" onclick="window.location.href='../plan.php';">
                 <i class="fas fa-home"></i> <?php echo xlt('Back to Plan'); ?>
             </button>
