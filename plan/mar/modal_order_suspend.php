@@ -181,7 +181,7 @@ $reasons_result = sqlStatement($reasons_query);
                     </div>
                 </div>
                 
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                <div class="modal-footer justify-content-between" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times"></i> <?php echo xlt('Cancel'); ?>
                     </button>

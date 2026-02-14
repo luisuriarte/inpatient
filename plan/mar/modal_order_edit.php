@@ -30,7 +30,7 @@ LEFT JOIN facility AS f ON f.id = bp.facility_id
         LEFT JOIN units AS u ON u.id = bp.current_unit_id
         LEFT JOIN rooms AS r ON r.id = bp.current_room_id
         LEFT JOIN beds AS b ON b.id = bp.current_bed_id
-    WHERE ps.schedule_id = ? AND bp.status = 'admitted' AND ps.status IN ('Active', 'Modified')
+    WHERE ps.schedule_id = ? AND bp.status = 'admitted' AND ps.active = 1
     ORDER BY ps.start_date;
 ";
 
@@ -466,9 +466,9 @@ $psStatus = $result['ps_status'];
                         <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Add to Medication List'); ?></label>
                     </div>
                 </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
-                    <button type="submit" class="btn btn-success"><?= xlt('Save') ?></button>
+                <div class="modal-footer justify-content-between" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= xlt('Close') ?></button>
+                    <button type="submit" class="btn btn-success"><?= xlt('Save') ?></button>
                 </div>
             </form>
         </div>

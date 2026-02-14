@@ -13,9 +13,27 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
 
     $dose_details = getDoseDetails($supply_id);
     
+    // Obtener reacciones de TODAS las dosis del schedule (historial completo)
+    $all_reactions_query = "
+        SELECT ps.supply_id, ps.dose_number, ps.effectiveness_score, ps.effectiveness_notes, 
+               ps.reaction_description, ps.reaction_time, ps.reaction_severity, ps.reaction_notes
+        FROM prescriptions_supply ps
+        WHERE ps.schedule_id = ?
+          AND (ps.effectiveness_score IS NOT NULL OR ps.effectiveness_notes IS NOT NULL 
+               OR ps.reaction_description IS NOT NULL OR ps.reaction_severity IS NOT NULL)
+        ORDER BY ps.dose_number ASC
+    ";
+    $all_reactions = sqlStatement($all_reactions_query, [$schedule_id]);
+    $reactions_history = [];
+    while ($reaction_row = sqlFetchArray($all_reactions)) {
+        $reactions_history[] = $reaction_row;
+    }
+    
     // Debug: Log whether dose details were found
     if ($dose_details) {
         error_log("modal_mar_actions.php: Found dose details for supply_id=$supply_id");
+        error_log("modal_mar_actions.php: Found " . count($reactions_history) . " doses with reactions in schedule");
+        
         $dose_status = $dose_details['status'] ?? null;
         $medications_text = getMedicationsDetails($schedule_id);
         
@@ -93,25 +111,40 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
         <div class="container mt-3">
             <h6><?php echo xlt("Allergy and Effectiveness Evaluation"); ?></h6>
             <?php
-            // Mostrar estado actual si existe
-            $has_effectiveness = !empty($dose_details['effectiveness_score']) || !empty($dose_details['effectiveness_notes']);
-            $has_reactions = (!empty($dose_details['reaction_description']) && 
+            // Contar cuántas dosis tienen evaluaciones
+            $doses_with_evaluations = count($reactions_history);
+            
+            // Verificar si la dosis actual tiene evaluaciones
+            $current_has_effectiveness = !empty($dose_details['effectiveness_score']) || !empty($dose_details['effectiveness_notes']);
+            $current_has_reactions = (!empty($dose_details['reaction_description']) && 
                              strtolower($dose_details['reaction_description']) !== 'no reaction' && 
                              strtolower($dose_details['reaction_description']) !== 'nothing') 
                              || !empty($dose_details['reaction_severity']);
             
-            if ($has_effectiveness || $has_reactions) {
+            // Mostrar mensaje resumen si hay evaluaciones en el historial
+            if ($doses_with_evaluations > 0) {
                 echo '<div class="alert alert-info">';
-                if ($has_effectiveness) {
+                echo '<i class="fas fa-info-circle"></i> ';
+                echo xlt("Effectiveness and reactions have been registered for") . ' ' . $doses_with_evaluations . ' ';
+                echo ($doses_with_evaluations === 1) ? xlt("dose") : xlt("doses");
+                echo '.<br><small class="text-muted">';
+                echo xlt("Press View History to see details");
+                echo '</small></div>';
+            }
+            
+            // Mostrar evaluaciones de la dosis actual si no están en el historial
+            if (($current_has_effectiveness || $current_has_reactions) && $doses_with_evaluations === 0) {
+                echo '<div class="alert alert-info">';
+                if ($current_has_effectiveness) {
                     echo '<strong>' . xlt("Effectiveness") . ':</strong> ' . text($dose_details['effectiveness_score'] ?? 'N/A');
                     if (!empty($dose_details['effectiveness_notes'])) {
                         echo '<br><small>' . text($dose_details['effectiveness_notes']) . '</small>';
                     }
                 }
-                if ($has_effectiveness && $has_reactions) {
+                if ($current_has_effectiveness && $current_has_reactions) {
                     echo '<hr>';
                 }
-                if ($has_reactions) {
+                if ($current_has_reactions) {
                     echo '<strong>' . xlt("Reactions") . ':</strong> ' . text($dose_details['reaction_description'] ?? 'N/A');
                     if (!empty($dose_details['reaction_severity'])) {
                         echo ' (' . text($dose_details['reaction_severity']) . ')';
@@ -122,16 +155,18 @@ if (isset($_GET['supply_id']) && isset($_GET['schedule_id'])) {
                 }
                 echo '</div>';
             }
+            
+            // Mostrar botón para registrar evaluación en la dosis actual
             ?>
             <button class="btn btn-info btn-sm" onclick="registerReactions(<?php echo attr($supply_id); ?>, <?php echo attr($schedule_id); ?>)">
-                <i class="fas fa-edit"></i> <?php echo xlt($has_effectiveness || $has_reactions ? "Edit Evaluation" : "Register Reaction or Effectiveness"); ?>
+                <i class="fas fa-plus-circle"></i> <?php echo xlt("Register Evaluation for this Dose"); ?>
             </button>
             <div id="reactionsForm" class="mt-2" style="display: none;">
                 <!-- Formulario de reacciones cargado vía AJAX -->
             </div>
         </div>
         </div>
-        <div class="d-flex justify-content-end mt-3 pt-3 border-top">
+        <div class="d-flex justify-content-start mt-3 pt-3 border-top">
                 <button type="button" class="btn btn-outline-secondary" onclick="if(typeof closeMarModal === 'function') { closeMarModal(); } else { document.getElementById('marActionsModal').style.display='none'; }">
                     <?php echo xlt("Close"); ?>
                 </button>

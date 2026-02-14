@@ -127,6 +127,12 @@ try {
                     )
                 );
 
+    // Establecer root_schedule_id igual al schedule_id para la primera versión
+    sqlStatement(
+        "UPDATE prescriptions_schedule SET root_schedule_id = ? WHERE schedule_id = ?",
+        array($schedule_id, $schedule_id)
+    );
+
     // Graba Intravenoso
     if ($intravenous == 1) {                    
         $insertQuery = "INSERT INTO prescriptions_intravenous (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate, iv_route, total_volume, concentration, concentration_units, iv_duration, status)

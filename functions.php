@@ -87,8 +87,9 @@ $patient_name = text($result['lname']) . ", " . text($result['fname']) . " " . t
 $patient_dni = text($result['pubpid']);
 
 $patient_data = getPatientData($pid);
-$patient_age = getPatientAge(str_replace('-', '', $patient_data['DOB']));
-$patient_sex = text($patient_data['sex']);
+$dob = $patient_data['DOB'] ?? '';
+$patient_age = getPatientAge(str_replace('-', '', $dob));
+$patient_sex = text($patient_data['sex'] ?? '');
 
 $insurance_data = getInsuranceData($pid, $type = "primary", $given = "insd.*, DATE_FORMAT(subscriber_DOB,'%m/%d/%Y') as subscriber_DOB, ic.name as provider_name");
 $insurance_name = text($insurance_data['provider_name']);
@@ -984,27 +985,26 @@ function getDoseDetails($supply_id) {
     // Debug: Log the supply_id being queried
     error_log("getDoseDetails: Querying for supply_id=$supply_id");
 
-    // Definir la consulta
+    // Definir la consulta - separar en dos partes para no depender de beds_patients
     $dose_query = "
         SELECT ps.supply_id, ps.schedule_datetime, ps.alarm1_datetime, ps.alarm1_active, ps.alarm2_datetime, ps.alarm2_active,
             ps.status, ps.dose_number, ps.max_dose, DATE_FORMAT(ps.schedule_datetime, '%h:%i %p') AS hs,
             CONCAT(p.lname, ', ', p.fname,
             IF(p.mname IS NOT NULL AND p.mname != '', CONCAT(' ', p.mname), '')) AS patient_name,
-            bp.current_bed_id AS bed_id, bp.current_room_id AS room_id, bp.current_unit_id AS unit_id, bp.facility_id,
-            f.name AS facility_name, u.unit_name AS unit_name, r.room_name AS room_name, b.bed_name AS bed_name,
             ps.schedule_id, ps.effectiveness_score, ps.effectiveness_notes, ps.reaction_description,
-            ps.reaction_time, ps.reaction_severity, ps.reaction_notes
+            ps.reaction_time, ps.reaction_severity, ps.reaction_notes,
+            bp.current_bed_id AS bed_id, bp.current_room_id AS room_id, bp.current_unit_id AS unit_id, bp.facility_id,
+            f.name AS facility_name, u.unit_name AS unit_name, r.room_name AS room_name, b.bed_name AS bed_name
         FROM prescriptions_supply ps
         LEFT JOIN prescriptions_schedule sch ON ps.schedule_id = sch.schedule_id
         LEFT JOIN patient_data AS p ON sch.patient_id = p.pid
-        LEFT JOIN beds_patients AS bp ON bp.patient_id = p.pid
+        LEFT JOIN beds_patients AS bp ON bp.patient_id = p.pid AND bp.status = 'admitted'
         LEFT JOIN facility AS f ON f.id = bp.facility_id
         LEFT JOIN units AS u ON u.id = bp.current_unit_id
         LEFT JOIN rooms AS r ON r.id = bp.current_room_id
         LEFT JOIN beds AS b ON b.id = bp.current_bed_id
         WHERE ps.supply_id = ?
-        GROUP BY ps.supply_id
-        ORDER BY ps.schedule_datetime;
+        LIMIT 1;
     ";
 
     // Ejecutar la consulta y devolver el resultado
@@ -1013,6 +1013,9 @@ function getDoseDetails($supply_id) {
     // Debug: Log whether a result was found
     if ($result) {
         error_log("getDoseDetails: Found result for supply_id=$supply_id");
+        error_log("getDoseDetails: effectiveness_score=" . ($result['effectiveness_score'] ?? 'NULL') . 
+                  " reaction_description=" . ($result['reaction_description'] ?? 'NULL') .
+                  " patient_name=" . ($result['patient_name'] ?? 'NULL'));
     } else {
         error_log("getDoseDetails: No result found for supply_id=$supply_id");
     }

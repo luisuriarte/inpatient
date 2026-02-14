@@ -52,7 +52,7 @@ $rooms = $selected_unit ? sqlStatement("SELECT id, room_name FROM rooms WHERE un
 // Modificar la consulta principal según los filtros
 // Solo pacientes actualmente admitidos con dosis desde las últimas 24 horas hacia adelante
 $filters = "WHERE bp.status = 'admitted' 
-    AND ps.status NOT IN ('Cancelled', 'Suspended')
+    AND ps.status != 'Cancelled'
     AND ps.schedule_datetime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)";
 if ($selected_facility) {
     $filters .= " AND bp.facility_id = $selected_facility";
@@ -399,50 +399,85 @@ function stopAlarm(itemId) {
     updateAlarmCounter();
 }
 
-// Silenciar alarma (permanentemente para esta sesión, cambia color a gris)
+// Silenciar alarma (cambia a estado gris sin sonido)
 function silenceAlarm(itemId) {
     console.log('[silenceAlarm] Silencing:', itemId);
-    
+
     const alarm = activeAlarms[itemId];
     if (alarm) {
         if (alarm.sound) alarm.sound.pause();
         if (alarm.timeout) clearTimeout(alarm.timeout);
         delete activeAlarms[itemId];
     }
-    
+
     var item = items.get(itemId);
     if (!item) return;
-    
+
     // Solo cambiar si es una alarma
     if (!item.className.includes('alarm1') && !item.className.includes('alarm2')) return;
 
-    // Determinar clase silenciada (alarm1-silenced o alarm2-silenced)
-    // Extraemos la base de la clase (alarm1 o alarm2)
-    const baseClass = item.className.includes('alarm1') ? 'alarm1' : 'alarm2';
-    const silencedClass = baseClass + '-silenced';
-    
-    items.update({
-        id: itemId,
-        className: silencedClass,
-        title: item.title + ' - <?php echo xlt("SILENCED"); ?>'
+    // Actualizar el estado en la base de datos
+    fetch('update_alarm_status.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `alarm_id=${encodeURIComponent(itemId)}&action=silence`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Determinar clase silenciada (alarm1-silenced o alarm2-silenced)
+            const baseClass = item.className.includes('alarm1') ? 'alarm1' : 'alarm2';
+            const silencedClass = baseClass + '-silenced';
+            
+            // Actualizar visualmente solo si la actualización en DB fue exitosa
+            items.update({
+                id: itemId,
+                className: silencedClass,
+                title: item.title + ' - <?php echo xlt("SILENCED"); ?>'
+            });
+
+            updateAlarmCounter();
+            showNotification('<?php echo xlt("Alarm silenced"); ?>', 'success');
+        } else {
+            showNotification('<?php echo xlt("Error silencing alarm"); ?>: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating alarm status:', error);
+        showNotification('<?php echo xlt("Error connecting to server"); ?>', 'error');
     });
-    
-    updateAlarmCounter();
-    showNotification('<?php echo xlt("Alarm silenced"); ?>', 'success');
 }
 
 // Silenciar todas las alarmas activas
 function silenceAllAlarms() {
     const alarmIds = Object.keys(activeAlarms);
-    
+
     if (alarmIds.length === 0) {
-        showNotification('<?php echo xlt("No active alarms"); ?>', 'info');
-        return;
+        // Si no hay alarmas activas en memoria, buscar todas las alarmas activas en la interfaz
+        var allItems = items.get({
+            filter: function(item) {
+                return item.className &&
+                       (item.className.includes('alarm1') || item.className.includes('alarm2')) &&
+                       !item.className.includes('silenced');
+            }
+        });
+        
+        allItems.forEach(function(item) {
+            silenceAlarm(item.id);
+        });
+        
+        if (allItems.length === 0) {
+            showNotification('<?php echo xlt("No active alarms"); ?>', 'info');
+        } else {
+            showNotification(`<?php echo xlt("Silenced"); ?> ${allItems.length} <?php echo xlt("alarms"); ?>`, 'success');
+        }
+    } else {
+        // Clonar los IDs para evitar problemas al eliminar mientras iteramos
+        [...alarmIds].forEach(silenceAlarm);
+        showNotification(`<?php echo xlt("Silenced"); ?> ${alarmIds.length} <?php echo xlt("alarms"); ?>`, 'success');
     }
-    
-    // Clonar los IDs para evitar problemas al eliminar mientras iteramos
-    [...alarmIds].forEach(silenceAlarm);
-    showNotification(`<?php echo xlt("Silenced"); ?> ${alarmIds.length} <?php echo xlt("alarms"); ?>`, 'success');
 }
 
 // Verificar alarmas que deberían estar sonando (según el tiempo actual)
@@ -631,12 +666,17 @@ function reactivateAlarm(itemId) {
                     // Formatear la hora a AM/PM
                     $title = addslashes(xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} " . xlt('by') . " $user_full_name " . xlt('at') . " $formatted_hour_supply");
                     $color = 'background-color: blue; color: white;'; // Color azul si está confirmado
+                    $className = 'supply';
                 } elseif ($dose_status === 'Suspended') {
                     $title = addslashes(xlt('Dose') . "# {$dose_number}/{$max_dose} - SUSPENDED");
-                    $color = 'background-color: #6c757d; color: white; text-decoration: line-through;';
+                    $color = ''; // El color viene del CSS
+                    $className = 'supplySuspended';
+                    $itemType = "type: 'point',";
                 } else {
                     $title = addslashes($formatted_hour . ' ' . xlt('Dose') . "# {$dose_number}/{$max_dose} - {$dose_status} - {$medications_text}");
                     $color = ''; // Sin estilo adicional para otros estados
+                    $className = 'supply';
+                    $itemType = '';
                 }
 
                 echo "items.add({
@@ -647,12 +687,13 @@ function reactivateAlarm(itemId) {
                     title: '$title',
                     data: {doseStatus: '{$dose_status}'},
                     style: '$color',
-                    className: 'supply',
+                    className: '$className',
+                    $itemType
                 });\n";
             }
 
-            // Solo agregar las alarmas si $dose_status no es 'Confirmed'
-            if ($dose_status !== 'Confirmed') {
+            // Solo agregar las alarmas si $dose_status no es 'Confirmed' ni 'Suspended'
+            if ($dose_status !== 'Confirmed' && $dose_status !== 'Suspended') {
                 echo "console.log('Processing alarms for dose $supply_id, status: $dose_status');\n";
                 
                 // Procesar alarma 1 si está activa
@@ -1021,6 +1062,13 @@ function reactivateAlarm(itemId) {
                             $('body').removeClass('modal-open').css('overflow', '');
                         }, { once: true });
                         
+                        // Agregar event listeners para botones de cerrar
+                        editModalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                editModal.hide();
+                            });
+                        });
+                        
                         editModal.show();
                     }
                 },
@@ -1062,6 +1110,13 @@ function reactivateAlarm(itemId) {
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open').css('overflow', '');
                         }, { once: true });
+                        
+                        // Agregar event listeners para botones de cerrar
+                        suspendModalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                suspendModal.hide();
+                            });
+                        });
                         
                         suspendModal.show();
                     }
@@ -1144,8 +1199,16 @@ function reactivateAlarm(itemId) {
             
             // CASO 1: Click en ALARMA
             if (itemId.startsWith('alarm_')) {
-                console.log('Alarm selected, silencing...');
-                silenceAlarm(itemId);
+                // Verificar si la alarma está silenciada (tiene la clase silenced)
+                var item = items.get(itemId);
+                if (item && (item.className.includes('alarm1-silenced') || item.className.includes('alarm2-silenced'))) {
+                    // Si la alarma está silenciada, mostrar opciones
+                    handleSilencedAlarmClick(itemId);
+                } else {
+                    // Si la alarma está activa, silenciarla
+                    console.log('Alarm selected, silencing...');
+                    silenceAlarm(itemId);
+                }
             } 
             // CASO 2: Click en DOSIS (main_event)
             else if (itemId.startsWith('main_event_')) {
@@ -1353,6 +1416,58 @@ function reactivateAlarm(itemId) {
             });
         });
 
+    // Función para manejar el clic en alarmas silenciadas
+    function handleSilencedAlarmClick(itemId) {
+        // Obtener información del elemento
+        var item = items.get(itemId);
+        if (!item) return;
+
+        // Determinar si es alarma 1 o 2
+        const isAlarm1 = item.className.includes('alarm1-silenced');
+        const alarmType = isAlarm1 ? 'alarm1' : 'alarm2';
+        const alarmNumber = isAlarm1 ? 1 : 2;
+
+        // Mostrar diálogo de confirmación con traducción
+        const alarmTitle = item.title.replace(' - <?php echo xlt("SILENCED"); ?>', '');
+        const message = `<?php echo xlt("What would you like to do with this alarm?"); ?>\n\n<?php echo xlt("Type"); ?>: ${alarmType.toUpperCase()}\n<?php echo xlt("Title"); ?>: ${alarmTitle}\n\n<?php echo xlt("OK to REACTIVATE, Cancel to DELETE"); ?>`;
+        
+        const action = confirm(message) ? 'reactivate' : 'delete';
+
+        // Realizar la acción correspondiente
+        fetch('update_alarm_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `alarm_id=${encodeURIComponent(itemId)}&action=${action}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (action === 'reactivate') {
+                    // Reactivar: cambiar a clase activa
+                    const activeClass = isAlarm1 ? 'alarm1' : 'alarm2';
+                    items.update({
+                        id: itemId,
+                        className: activeClass,
+                        title: item.title.replace(' - <?php echo xlt("SILENCED"); ?>', '')
+                    });
+                    showNotification('<?php echo xlt("Alarm reactivated"); ?>', 'success');
+                } else if (action === 'delete') {
+                    // Eliminar: remover del timeline
+                    items.remove(itemId);
+                    showNotification('<?php echo xlt("Alarm removed"); ?>', 'info');
+                }
+            } else {
+                showNotification('<?php echo xlt("Error updating alarm"); ?>: ' + data.message, 'error');
+            }
+            updateAlarmCounter();
+        })
+        .catch(error => {
+            console.error('Error updating alarm status:', error);
+            showNotification('<?php echo xlt("Error connecting to server"); ?>', 'error');
+        });
+    }
     </script>
 
     <!-- Modal principal de dosis - Custom implementation to avoid Bootstrap conflicts -->

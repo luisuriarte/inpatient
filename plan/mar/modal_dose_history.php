@@ -74,6 +74,7 @@ while ($count_row = sqlFetchArray($result_count)) {
                         <th><?php echo xlt('Administered By'); ?></th>
                         <th><?php echo xlt('Effectiveness'); ?></th>
                         <th><?php echo xlt('Reactions'); ?></th>
+                        <th><?php echo xlt('Actions'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -150,6 +151,21 @@ while ($count_row = sqlFetchArray($result_count)) {
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
                             </td>
+                            <td>
+                                <?php 
+                                $has_evaluation = !empty($row['effectiveness_score']) || 
+                                                 (!empty($row['reaction_description']) && 
+                                                  strtolower($row['reaction_description']) !== 'no reaction' && 
+                                                  strtolower($row['reaction_description']) !== 'nothing');
+                                if ($has_evaluation): 
+                                ?>
+                                    <button class="btn btn-sm btn-info" onclick="registerReactions(<?php echo attr($row['supply_id']); ?>, <?php echo attr($schedule_id); ?>)">
+                                        <i class="fas fa-edit"></i> <?php echo xlt('Edit'); ?>
+                                    </button>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 </tbody>
@@ -198,7 +214,7 @@ while ($count_row = sqlFetchArray($result_count)) {
         </div>
     <?php endif; ?>
 </div>
-<div class="modal-footer">
+<div class="modal-footer justify-content-start">
     <button type="button" class="btn btn-secondary" onclick="closeMarModal()">
         <i class="fas fa-times"></i> <?php echo xlt('Close'); ?>
     </button>

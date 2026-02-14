@@ -56,6 +56,6 @@ $infusion_datetime = date('Y-m-d H:i');
 <p><strong><?php echo xlt("Operator"); ?>:</strong> <?php echo text($_SESSION['authUser']); ?></p>
 
 <div class="d-flex justify-content-between mt-3 pt-3 border-top">
-    <button type="button" class="btn btn-primary" onclick="saveConfirmedDose(<?php echo attr($supply_id); ?>)"><?php echo xlt("Save"); ?></button>
     <button type="button" class="btn btn-secondary" onclick="closeMarModal()"><?php echo xlt("Cancel"); ?></button>
+    <button type="button" class="btn btn-primary" onclick="saveConfirmedDose(<?php echo attr($supply_id); ?>)"><?php echo xlt("Save"); ?></button>
 </div>

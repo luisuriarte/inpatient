@@ -507,6 +507,14 @@ body {
     margin-top: 0px;
 }
 
+.vis-item.vis-dot.supplySuspended.vis-readonly {
+    width: 2px;
+    height: 10px;
+    background-color: #B8B830;
+    border: 0px;
+    margin-top: 0px;
+}
+
 
 
 .bed-card {
@@ -1044,6 +1052,15 @@ body {
     background-color: green;
     border: 2px solid darkgreen;
     cursor: pointer;
+}
+
+/* Dosis suspendidas - amarillo grisáceo */
+.vis-item.supply.suspended,
+.vis-item.supplySuspended {
+    background-color: #B8B830 !important;
+    border: 2px solid #8B8B23 !important;
+    cursor: pointer;
+    opacity: 0.8;
 }
 
 /* Hover effects */

@@ -2,19 +2,13 @@
 require_once("../../functions.php");
 require_once("../../../interface/globals.php");
 
-// Verificar si la solicitud es POST
-//if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-//    echo json_encode(['success' => false, 'message' => xlt('Method not allowed')]);
-//    exit;
-//}
-
 $userId = $_SESSION['authUserID'];
 $userName = $_SESSION['authUser'];
 
-// Obtener schedule_id (campo oculto que debe agregarse al formulario)
-$schedule_id = $_POST['schedule_id'] ?? null;
+// Obtener schedule_id del schedule actual a modificar
+$current_schedule_id = $_POST['schedule_id'] ?? null;
 
-if (!$schedule_id) {
+if (!$current_schedule_id) {
     echo json_encode(['success' => false, 'message' => xlt('No schedule ID provided')]);
     exit;
 }
@@ -67,29 +61,30 @@ if (!empty($_POST['end_date'])) {
     $end_date_formatted = $end_date->format('Y-m-d H:i:s');
 }
 
-// Obtener datos actuales para comparar cambios
-$current_data_query = "
-    SELECT ps.prescription_id, ps.patient_id, ps.scheduled, ps.intravenous
+// Obtener datos del schedule actual para versionado
+$current_schedule_query = "
+    SELECT ps.*, p.id as prescription_id, p.patient_id
     FROM prescriptions_schedule ps
-    WHERE ps.schedule_id = ?
+    JOIN prescriptions p ON ps.prescription_id = p.id
+    WHERE ps.schedule_id = ? AND ps.active = 1
 ";
-$current_data = sqlQuery($current_data_query, [$schedule_id]);
+$current_schedule = sqlQuery($current_schedule_query, [$current_schedule_id]);
 
-if (!$current_data) {
-    echo json_encode(['success' => false, 'message' => xlt('Schedule not found')]);
+if (!$current_schedule) {
+    echo json_encode(['success' => false, 'message' => xlt('Active schedule not found')]);
     exit;
 }
 
-$prescription_id = $current_data['prescription_id'];
-$patient_id = $current_data['patient_id'];
-$previous_scheduled = $current_data['scheduled'];
-$previous_intravenous = $current_data['intravenous'];
+$prescription_id = $current_schedule['prescription_id'];
+$patient_id = $current_schedule['patient_id'];
+$previous_version = $current_schedule['version'] ?? 1;
+$root_schedule_id = $current_schedule['root_schedule_id'] ?? $current_schedule_id;
 
 // Inicia la transacción
 $database->StartTrans();
 
 try {
-    // 1. Actualizar la tabla prescriptions
+    // 1. Actualizar la tabla prescriptions (datos del medicamento)
     $update_prescription_query = "
         UPDATE prescriptions 
         SET provider_id = ?,
@@ -110,255 +105,112 @@ try {
     ";
     
     sqlStatement($update_prescription_query, [
-        $provider_id,
-        $drug,
-        $dosage,
-        $dosage, // quantity igual a dosage
-        $size,
-        $unit,
-        $form,
-            $route,
-        $note,
-        $active,
-        $userId,
-        $prescription_id
+        $provider_id, $drug, $dosage, $dosage, $size, $unit, $form,
+        $route, $note, $active, $userId, $prescription_id
     ]);
 
-    // 2. Actualizar la tabla prescriptions_schedule
-    $update_schedule_query = "
+    // 2. Desactivar el schedule actual y marcarlo como modificado
+    $deactivate_schedule_query = "
         UPDATE prescriptions_schedule 
-        SET intravenous = ?,
-            scheduled = ?,
-            notifications = ?,
-            start_date = ?,
-            end_date = ?,
-            unit_frequency = ?,
-            time_frequency = ?,
-            unit_duration = ?,
-            time_duration = ?,
-            alarm1_unit = ?,
-            alarm1_time = ?,
-            alarm2_unit = ?,
-            alarm2_time = ?,
+        SET active = 0,
+            status = 'Modified',
             modification_reason = ?,
             modifed_by = ?,
-            modification_datetime = NOW(),
-            `status` = 'Modified'
+            modification_datetime = NOW()
         WHERE schedule_id = ?
     ";
     
-    sqlStatement($update_schedule_query, [
-        $intravenous,
-        $scheduled,
-        $notifications,
-        $start_date_formatted,
-        $end_date_formatted,
-        $unit_frequency,
-        $time_frequency,
-        $unit_duration,
-        $time_duration,
-        $alarm1_unit,
-        $alarm1_time,
-        $alarm2_unit,
-        $alarm2_time,
-        $modification_reason,
-        $userId,
-        $schedule_id
+    sqlStatement($deactivate_schedule_query, [
+        $modification_reason, $userId, $current_schedule_id
     ]);
 
-    // 3. Manejar prescriptions_intravenous
+    // 3. Insertar nuevo schedule con versión incrementada
+    $new_version = $previous_version + 1;
+    
+    $insert_schedule_query = "
+        INSERT INTO prescriptions_schedule 
+        (prescription_id, patient_id, intravenous, scheduled, notifications, 
+         start_date, end_date, unit_frequency, time_frequency, unit_duration, time_duration,
+         alarm1_unit, alarm1_time, alarm2_unit, alarm2_time, status,
+         version, previous_schedule_id, root_schedule_id, active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, ?, 1)
+    ";
+    
+    $new_schedule_id = sqlInsert($insert_schedule_query, [
+        $prescription_id, $patient_id, $intravenous, $scheduled, $notifications,
+        $start_date_formatted, $end_date_formatted, $unit_frequency, $time_frequency,
+        $unit_duration, $time_duration, $alarm1_unit, $alarm1_time, $alarm2_unit, $alarm2_time,
+        $new_version, $current_schedule_id, $root_schedule_id
+    ]);
+
+    // 4. Manejar prescriptions_intravenous para el nuevo schedule
     if ($intravenous == 1) {
-        // Verificar si ya existe un registro intravenoso para este schedule
-        $existing_iv = sqlQuery(
-            "SELECT intravenous_id FROM prescriptions_intravenous WHERE schedule_id = ?",
-            [$schedule_id]
-        );
+        $insert_iv_query = "
+            INSERT INTO prescriptions_intravenous 
+            (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate, iv_route, 
+             total_volume, concentration, concentration_units, iv_duration, status, modify_datetime, user_modify)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+        ";
         
-        if ($existing_iv) {
-            // Actualizar registro existente
-            $update_iv_query = "
-                UPDATE prescriptions_intravenous 
-                SET vehicle = ?,
-                    catheter_type = ?,
-                    infusion_rate = ?,
-                    iv_route = ?,
-                    total_volume = ?,
-                    concentration = ?,
-                    concentration_units = ?,
-                    iv_duration = ?,
-                    status = ?,
-                    modify_datetime = NOW(),
-                    user_modify = ?
-                WHERE schedule_id = ?
-            ";
-            
-            sqlStatement($update_iv_query, [
-                $vehicle,
-                $catheter_type,
-                $infusion_rate,
-                $iv_route,
-                $total_volume,
-                $concentration,
-                $concentration_units,
-                $iv_duration,
-                $iv_status,
-                $userId,
-                $schedule_id
-            ]);
-        } else {
-            // Insertar nuevo registro intravenoso
-            $insert_iv_query = "
-                INSERT INTO prescriptions_intravenous 
-                (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate, iv_route, 
-                 total_volume, concentration, concentration_units, iv_duration, status, modify_datetime, user_modify)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-            ";
-            
-            sqlStatement($insert_iv_query, [
-                $prescription_id,
-                $schedule_id,
-                $vehicle,
-                $catheter_type,
-                $infusion_rate,
-                $iv_route,
-                $total_volume,
-                $concentration,
-                $concentration_units,
-                $iv_duration,
-                $iv_status,
-                $userId
-            ]);
-        }
+        sqlStatement($insert_iv_query, [
+            $prescription_id, $new_schedule_id, $vehicle, $catheter_type, $infusion_rate,
+            $iv_route, $total_volume, $concentration, $concentration_units, $iv_duration,
+            $iv_status, $userId
+        ]);
+    }
+
+    // 5. Cancelar supplies pendientes del schedule anterior
+    $cancel_supplies_query = "
+        UPDATE prescriptions_supply 
+        SET status = 'Cancelled',
+            modified_by = ?,
+            modification_datetime = NOW(),
+            active = 0
+        WHERE schedule_id = ? 
+        AND status = 'Pending'
+    ";
+    
+    sqlStatement($cancel_supplies_query, [$userId, $current_schedule_id]);
+
+    // 6. Generar nuevos supplies para el nuevo schedule
+    if ($scheduled == 0) {
+        // Dosis única
+        $insert_single_query = "
+            INSERT INTO prescriptions_supply 
+            (schedule_id, patient_id, schedule_datetime, dose_number, max_dose, status, active, created_by, creation_datetime)
+            VALUES (?, ?, ?, 1, 1, 'Pending', 1, ?, NOW())
+        ";
+        
+        sqlStatement($insert_single_query, [
+            $new_schedule_id, $patient_id, $start_date_formatted, $userId
+        ]);
     } else {
-        // Si ya no es intravenoso, eliminar o desactivar el registro
-        sqlStatement(
-            "UPDATE prescriptions_intravenous SET status = 'Inactive', modify_datetime = NOW(), user_modify = ? WHERE schedule_id = ?",
-            [$userId, $schedule_id]
-        );
+        // Generar supplies programados usando la función existente
+        createPrescriptionsSupply($new_schedule_id);
     }
 
-    // 4. Manejar cambios en scheduled (programación de dosis)
-    if ($previous_scheduled != $scheduled || ($scheduled == 1 && $previous_scheduled == 1)) {
-        // Si cambió de no programado a programado, o si ya era programado y se modificó
-        // Eliminar dosis pendientes futuras y regenerar
-        
-        // Marcar como canceladas las dosis pendientes futuras
-        sqlStatement(
-            "UPDATE prescriptions_supply 
-             SET status = 'Cancelled', active = 0, modification_datetime = NOW() 
-             WHERE schedule_id = ? AND status = 'Pending' AND schedule_datetime > NOW()",
-            [$schedule_id]
-        );
-        
-        if ($scheduled == 1) {
-            // Regenerar dosis programadas - capturar cualquier salida
-            ob_start();
-            createPrescriptionsSupply($schedule_id);
-            ob_end_clean();
-        } else {
-            // Si es dosis única, crear una sola dosis
-            $existing_single = sqlQuery(
-                "SELECT supply_id FROM prescriptions_supply WHERE schedule_id = ? AND dose_number = 1",
-                [$schedule_id]
-            );
-            
-            if (!$existing_single) {
-                $insert_single_query = "
-                    INSERT INTO prescriptions_supply 
-                    (schedule_id, patient_id, schedule_datetime, dose_number, max_dose, status, active, created_by, creation_datetime)
-                    VALUES (?, ?, ?, 1, 1, 'Pending', 1, ?, NOW())
-                ";
-                
-                sqlStatement($insert_single_query, [
-                    $schedule_id,
-                    $patient_id,
-                    $start_date_formatted,
-                    $userId
-                ]);
-            }
-        }
-    }
-
-    // 5. Actualizar alarms de las dosis pendientes existentes si cambiaron las alarmas
-    if ($notifications == 1) {
-        // Obtener todas las dosis pendientes
-        $pending_doses = sqlStatement(
-            "SELECT supply_id, schedule_datetime FROM prescriptions_supply WHERE schedule_id = ? AND status = 'Pending' AND active = 1",
-            [$schedule_id]
-        );
-        
-        while ($dose = sqlFetchArray($pending_doses)) {
-            $supply_id = $dose['supply_id'];
-            $dose_datetime = new DateTime($dose['schedule_datetime']);
-            
-            // Calcular nuevos tiempos de alarma
-            $alarm1_datetime = null;
-            $alarm2_datetime = null;
-            
-            if ($alarm1_unit && $alarm1_time) {
-                $alarm1_offset = getTimeOffset($alarm1_unit, $alarm1_time);
-                if ($alarm1_offset !== null) {
-                    $alarm1_dt = clone $dose_datetime;
-                    $alarm1_dt->modify("-{$alarm1_offset} minutes");
-                    $alarm1_datetime = $alarm1_dt->format('Y-m-d H:i:s');
-                }
-            }
-            
-            if ($alarm2_unit && $alarm2_time) {
-                $alarm2_offset = getTimeOffset($alarm2_unit, $alarm2_time);
-                if ($alarm2_offset !== null) {
-                    $alarm2_dt = clone $dose_datetime;
-                    $alarm2_dt->modify("-{$alarm2_offset} minutes");
-                    $alarm2_datetime = $alarm2_dt->format('Y-m-d H:i:s');
-                }
-            }
-            
-            // Actualizar alarms en prescriptions_supply
-            sqlStatement(
-                "UPDATE prescriptions_supply 
-                 SET alarm1_datetime = ?, alarm1_active = ?, alarm2_datetime = ?, alarm2_active = ?
-                 WHERE supply_id = ?",
-                [
-                    $alarm1_datetime,
-                    $alarm1_datetime ? 1 : 0,
-                    $alarm2_datetime,
-                    $alarm2_datetime ? 1 : 0,
-                    $supply_id
-                ]
-            );
-        }
-    }
-
-    // 6. Manejar lists y lists_medication si está marcado
+    // 7. Manejar lists y lists_medication
     if ($medications_list == 1) {
-        // Verificar si ya existe en lists
-        $existing_list = sqlQuery(
-            "SELECT id FROM lists WHERE pid = ? AND type = 'medication' AND title = ? AND enddate IS NULL",
-            [$patient_id, $drug]
-        );
-        
-        // Formatear la descripción del medicamento
         $medication_description = $dosage . ' ' . xlt('dose');
         if ($scheduled == 1 && $unit_frequency && $time_frequency) {
             $medication_description .= ' ' . xlt('Every') . ' ' . $unit_frequency . ' ' . xlt($time_frequency);
         }
         
+        $existing_list = sqlQuery(
+            "SELECT id FROM lists WHERE pid = ? AND type = 'medication' AND title = ? AND enddate IS NULL",
+            [$patient_id, $drug]
+        );
+        
         if ($existing_list) {
-            // Actualizar registro existente
             sqlStatement(
-                "UPDATE lists 
-                 SET begdate = ?, enddate = ?, comments = ?, user = ?, modifydate = NOW()
-                 WHERE id = ?",
+                "UPDATE lists SET begdate = ?, enddate = ?, comments = ?, user = ?, modifydate = NOW() WHERE id = ?",
                 [$start_date_formatted, $end_date_formatted, $note, $userName, $existing_list['id']]
             );
-            
-            // Actualizar lists_medication
             sqlStatement(
                 "UPDATE lists_medication SET drug_dosage_instructions = ? WHERE list_id = ?",
                 [$medication_description, $existing_list['id']]
             );
         } else {
-            // Insertar nuevo registro
             $uuid_lists = generateUUID();
             $list_id = sqlInsert(
                 "INSERT INTO lists (uuid, date, type, subtype, title, begdate, enddate, comments, pid, user, modifydate)
@@ -377,29 +229,18 @@ try {
     // Commit de la transacción
     $database->CompleteTrans();
     
-    echo json_encode(['success' => true, 'message' => xlt('Order updated successfully')]);
+    echo json_encode([
+        'success' => true, 
+        'message' => xlt('Order updated successfully'),
+        'new_schedule_id' => $new_schedule_id,
+        'version' => $new_version
+    ]);
 
 } catch (Exception $e) {
-    // Rollback en caso de error
     $database->FailTrans();
     $database->CompleteTrans();
     
     error_log('Error updating order: ' . $e->getMessage());
     echo json_encode(['success' => false, 'message' => xlt('Error updating order') . ': ' . $e->getMessage()]);
-}
-
-// Función auxiliar para calcular el offset en minutos según la unidad de tiempo
-function getTimeOffset($value, $unit) {
-    if (!$value || !$unit) return null;
-    
-    $multipliers = [
-        'minutes' => 1,
-        'hours' => 60,
-        'days' => 1440,
-        'weeks' => 10080,
-        'months' => 43200 // Aproximado
-    ];
-    
-    return $value * ($multipliers[$unit] ?? 1);
 }
 ?>
