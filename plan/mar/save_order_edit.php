@@ -84,45 +84,41 @@ $root_schedule_id = $current_schedule['root_schedule_id'] ?? $current_schedule_i
 $database->StartTrans();
 
 try {
-    // 1. Actualizar la tabla prescriptions (datos del medicamento)
-    $update_prescription_query = "
-        UPDATE prescriptions 
-        SET provider_id = ?,
-            drug = ?,
-            dosage = ?,
-            quantity = ?,
-            size = ?,
-            unit = ?,
-            form = ?,
-            route = ?,
-            note = ?,
-            active = ?,
-            date_modified = NOW(),
-            updated_by = ?,
-            usage_category = 'inpatient',
-            usage_category_title = 'Inpatient'
-        WHERE id = ?
-    ";
-    
-    sqlStatement($update_prescription_query, [
-        $provider_id, $drug, $dosage, $dosage, $size, $unit, $form,
-        $route, $note, $active, $userId, $prescription_id
-    ]);
+        // 1. Crear nueva prescription (version estructural)
+        $insert_prescription_query = "
+            INSERT INTO prescriptions
+            (provider_id, patient_id, drug, dosage, quantity, size, unit, form, route,
+            note, active, date_added, date_modified, usage_category, usage_category_title)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW(), 'inpatient', 'Inpatient')
+        ";
 
-    // 2. Desactivar el schedule actual y marcarlo como modificado
-    $deactivate_schedule_query = "
-        UPDATE prescriptions_schedule 
-        SET active = 0,
-            status = 'Modified',
-            modification_reason = ?,
-            modifed_by = ?,
-            modification_datetime = NOW()
-        WHERE schedule_id = ?
-    ";
-    
-    sqlStatement($deactivate_schedule_query, [
-        $modification_reason, $userId, $current_schedule_id
-    ]);
+        $new_prescription_id = sqlInsert($insert_prescription_query, [
+            $provider_id,
+            $patient_id,
+            $drug,
+            $dosage,
+            $dosage,
+            $size,
+            $unit,
+            $form,
+            $route,
+            $note
+        ]);
+
+// 2. Desactivar schedule actual
+sqlStatement("
+    UPDATE prescriptions_schedule 
+    SET active = 0,
+        status = 'Modified',
+        modification_reason = ?,
+        modifed_by = ?,
+        modification_datetime = NOW()
+    WHERE schedule_id = ?
+", [
+    $modification_reason,
+    $userId,
+    $current_schedule_id
+]);
 
     // 3. Insertar nuevo schedule con versión incrementada
     $new_version = $previous_version + 1;
@@ -136,27 +132,97 @@ try {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, ?, 1)
     ";
     
-    $new_schedule_id = sqlInsert($insert_schedule_query, [
-        $prescription_id, $patient_id, $intravenous, $scheduled, $notifications,
-        $start_date_formatted, $end_date_formatted, $unit_frequency, $time_frequency,
-        $unit_duration, $time_duration, $alarm1_unit, $alarm1_time, $alarm2_unit, $alarm2_time,
-        $new_version, $current_schedule_id, $root_schedule_id
-    ]);
+        $new_schedule_id = sqlInsert($insert_schedule_query, [
+            $new_prescription_id,
+            $patient_id,
+            $intravenous,
+            $scheduled,
+            $notifications,
+            $start_date_formatted,
+            $end_date_formatted,
+            $unit_frequency,
+            $time_frequency,
+            $unit_duration,
+            $time_duration,
+            $alarm1_unit,
+            $alarm1_time,
+            $alarm2_unit,
+            $alarm2_time,
+            $new_version,
+            $current_schedule_id,
+            $root_schedule_id
+        ]);
 
     // 4. Manejar prescriptions_intravenous para el nuevo schedule
     if ($intravenous == 1) {
-        $insert_iv_query = "
-            INSERT INTO prescriptions_intravenous 
-            (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate, iv_route, 
-             total_volume, concentration, concentration_units, iv_duration, status, modify_datetime, user_modify)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-        ";
-        
-        sqlStatement($insert_iv_query, [
-            $prescription_id, $new_schedule_id, $vehicle, $catheter_type, $infusion_rate,
-            $iv_route, $total_volume, $concentration, $concentration_units, $iv_duration,
-            $iv_status, $userId
+
+        // Buscar IV activo actual
+        $current_iv = sqlQuery("
+            SELECT * FROM prescriptions_intravenous
+            WHERE schedule_id = ?
+            AND active = 1
+            ORDER BY intravenous_id DESC
+            LIMIT 1
+        ", [$current_schedule_id]);
+
+        $new_iv_version = 1;
+        $root_iv_id = null;
+        $previous_iv_id = null;
+
+        if ($current_iv) {
+
+            // Desactivar IV anterior
+            sqlStatement("
+                UPDATE prescriptions_intravenous
+                SET active = 0,
+                    status = 'Modified',
+                    modified_by = ?,
+                    modification_datetime = NOW()
+                WHERE intravenous_id = ?
+            ", [$userId, $current_iv['intravenous_id']]);
+
+            $new_iv_version = $current_iv['version'] + 1;
+            $root_iv_id = $current_iv['root_intravenous_id'] ?? $current_iv['intravenous_id'];
+            $previous_iv_id = $current_iv['intravenous_id'];
+        }
+
+        if (!$root_iv_id) {
+            $root_iv_id = null; // se asignará luego
+        }
+
+        // Insertar nuevo IV
+        $new_iv_id = sqlInsert("
+            INSERT INTO prescriptions_intravenous
+            (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate,
+            iv_route, total_volume, concentration, concentration_units, iv_duration,
+            status, version, previous_intravenous_id, root_intravenous_id,
+            active, created_by, creation_datetime)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, ?, 1, ?, NOW())
+        ", [
+            $new_prescription_id,
+            $new_schedule_id,
+            $vehicle,
+            $catheter_type,
+            $infusion_rate,
+            $iv_route,
+            $total_volume,
+            $concentration,
+            $concentration_units,
+            $iv_duration,
+            $new_iv_version,
+            $previous_iv_id,
+            $root_iv_id,
+            $userId
         ]);
+
+        // Si es el primero, actualizar root_intravenous_id
+        if (!$previous_iv_id) {
+            sqlStatement("
+                UPDATE prescriptions_intravenous
+                SET root_intravenous_id = ?
+                WHERE intravenous_id = ?
+            ", [$new_iv_id, $new_iv_id]);
+        }
     }
 
     // 5. Cancelar supplies pendientes del schedule anterior

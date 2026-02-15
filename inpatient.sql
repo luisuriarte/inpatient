@@ -182,13 +182,22 @@ CREATE TABLE `prescriptions_intravenous` (
   `concentration_units` varchar(20) DEFAULT '' COMMENT 'SELECT option_id, title FROM list_options WHERE list_id=''proc_unit'';',
   `total_volume` decimal(5,2) DEFAULT NULL,
   `iv_duration` decimal(5,2) DEFAULT NULL,
-  `status` varchar(20) DEFAULT NULL COMMENT 'Active, Changed',
+  `status` varchar(20) NOT NULL DEFAULT 'Active' COMMENT 'Active, Modified, Suspended, Cancelled',
+  `version` int(11) NOT NULL DEFAULT 1,
+  `previous_intravenous_id` int(11) DEFAULT NULL,
+  `root_intravenous_id` int(11) DEFAULT NULL,
+  `active` tinyint(4) NOT NULL DEFAULT 1,
+  `created_by` int(11) DEFAULT NULL,
+  `creation_datetime` datetime DEFAULT NULL,
+  `modified_by` int(11) DEFAULT NULL,
+  `modification_datetime` datetime DEFAULT NULL,
   `modify_datetime` datetime DEFAULT NULL,
   `user_modify` int(11) DEFAULT NULL,
   PRIMARY KEY (`intravenous_id`) USING BTREE,
-  KEY `fk_iv_schedule` (`schedule_id`),
+  KEY `idx_iv_schedule_active` (`schedule_id`,`active`),
+  KEY `idx_iv_root` (`root_intravenous_id`),
   CONSTRAINT `fk_iv_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `prescriptions_schedule` (`schedule_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=94 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `beds_patients_tracker` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
