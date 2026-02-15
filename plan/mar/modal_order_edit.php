@@ -19,7 +19,7 @@ $query = "
         pr.`active`, ps.start_date, pr.provider_id, pr.drug, pr.dosage, pr.size, pr.unit, pr.form, pr.route, pr.note,
         ps.intravenous,
         iv.vehicle, iv.catheter_type, iv.infusion_rate, iv.iv_route, iv.concentration, iv.concentration_units, iv.total_volume, iv.iv_duration, iv.`status` AS iv_status,
-        ps.status AS ps_status, ps.scheduled, ps.unit_frequency, ps.time_frequency, ps.unit_duration, ps.time_duration,
+        ps.status AS ps_status, ps.order_type, ps.unit_frequency, ps.time_frequency, ps.unit_duration, ps.time_duration,
         ps.alarm1_unit, ps.alarm1_time, ps.alarm2_unit, ps.alarm2_time, ps.end_date
     FROM prescriptions_schedule ps
         LEFT JOIN prescriptions AS pr ON ps.prescription_id = pr.id
@@ -54,7 +54,7 @@ $unit = $result['unit'];
 $form = $result['form'];
 $route = $result['route'];
 $note = $result['note'];
-$scheduled = $result['scheduled'];
+$orderType = $result['order_type'] ?? 'scheduled';
 $unitFrequency = $result['unit_frequency'];
 $timeFrequency = $result['time_frequency'];
 $unitDuration = $result['unit_duration'];
@@ -252,7 +252,7 @@ $psStatus = $result['ps_status'];
                                         $catheter_query = "SELECT title FROM list_options WHERE list_id = 'catheter_type'";
                                         $catheter_result = sqlStatement($catheter_query);
                                         while ($catheter_option = sqlFetchArray($catheter_result)) {
-                                            $selected = ($catheter_option['option_id'] == $ivCatheter) ? 'selected' : '';
+                                            $selected = ($catheter_option['title'] == $ivCatheterType) ? 'selected' : '';
                                             echo '<option value="' . attr($catheter_option['title']) . '" ' . $selected . '>' . text($catheter_option['title']) . '</option>';
                                         }
                                         ?>
@@ -334,16 +334,29 @@ $psStatus = $result['ps_status'];
                         <input type="hidden" class="form-control" name="iv_status" value="<?php echo attr($ivStatus); ?>" id="iv_status">
                     </div>
                     <p> </p>
-                    <!-- Field: Scheduled -->
-                    <div class="form-group d-flex align-items-center">
-                        <div class="custom-slider-switch ml-3">
-                            <input type="checkbox" name="scheduled" id="scheduledSwitchEdit" value="1" autocomplete="off" <?php echo ($scheduled == 1) ? 'checked' : ''; ?>>
-                        </div>
-                        <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Scheduled'); ?></label>
+
+                    <!-- Field: Order Type -->
+                    <div class="form-group">
+                        <label for="order_type"><strong><?php echo xlt('Order Type'); ?></strong></label>
+                        <select class="form-control" id="order_type" name="order_type" required>
+                            <option value="scheduled" <?php echo ($orderType == 'scheduled') ? 'selected' : ''; ?>>
+                                <?php echo xlt('Scheduled'); ?>
+                            </option>
+                            <option value="unique" <?php echo ($orderType == 'unique') ? 'selected' : ''; ?>>
+                                <?php echo xlt('One Time'); ?>
+                            </option>
+                            <option value="prn" <?php echo ($orderType == 'prn') ? 'selected' : ''; ?>>
+                                <?php echo xlt('PRN (As Needed)'); ?>
+                            </option>
+                            <option value="stat" <?php echo ($orderType == 'stat') ? 'selected' : ''; ?>>
+                                <?php echo xlt('STAT (Immediate)'); ?>
+                            </option>
+                        </select>
                     </div>
 
+
                     <!-- Repeat medication fields (only visible if One-time Medication is No) -->
-                    <div id="repeatFieldsEdit" style="background-color: #e0e1fb; border-top: 1px solid #dee2e6; <?php echo ($scheduled != 1) ? 'display: none;' : ''; ?>">
+                    <div id="repeatFieldsEdit" style="background-color: #e0e1fb; border-top: 1px solid #dee2e6; <?php echo ($orderType !== 'scheduled') ? 'display: none;' : ''; ?>
                         <!-- Group: Unit Frequency and Time Frequency -->
                         <div class="form-group row">
                             <!-- Field: Unit Frequency -->
@@ -492,15 +505,31 @@ $psStatus = $result['ps_status'];
     }
 
     // Función para alternar visibilidad de campos de repetición
-    function toggleScheduledFieldsEdit() {
-        var isChecked = $('#scheduledSwitchEdit').is(':checked');
-        console.log('Scheduled switch:', isChecked);
-        if (isChecked) {
+    function toggleOrderTypeFieldsEdit() {
+        var type = $('#order_type').val();
+
+        if (type === 'scheduled') {
             $('#repeatFieldsEdit').show();
         } else {
             $('#repeatFieldsEdit').hide();
         }
+
+        if (type === 'prn') {
+            $('#repeatFieldsEdit').hide();
+        }
+
+        if (type === 'unique' || type === 'stat') {
+            $('#repeatFieldsEdit').hide();
+        }
     }
+
+    // Inicializar
+    toggleOrderTypeFieldsEdit();
+
+    $('#order_type').on('change', function() {
+        toggleOrderTypeFieldsEdit();
+    });
+
 
     // Función para alternar visibilidad de campos de notificaciones
     function toggleNotificationFieldsEdit() {

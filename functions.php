@@ -779,144 +779,152 @@ function setBedToCleaning($bedId, $userId, $notes = null) {
     return insertBedStatusLog($bedId, 'cleaning', $userId, null, $notes);
 }
 
-// ==========================================
-// FUNCIONES EXISTENTES (sin cambios)
-// ==========================================
+function createPrescriptionsSupply($schedule_id)
+{
+    global $database;
 
-function debugLog($message) {
-    $logFile = '/var/log/nginx/logfile.txt';
-    file_put_contents($logFile, $message . PHP_EOL, FILE_APPEND);
-}
-function createPrescriptionsSupply($schedule_id) {
-    // Obtener datos de prescriptions_schedule usando sqlStatement() y sqlFetchArray()
-    $schedule_query = "SELECT * FROM prescriptions_schedule WHERE schedule_id = ?";
-    $schedule_result = sqlStatement($schedule_query, array($schedule_id));
-    $schedule = sqlFetchArray($schedule_result);
+    $user_id = $_SESSION['authUserID'] ?? 0;
 
-    if (!$schedule) return;
+    // 1️⃣ Obtener schedule activo
+    $schedule = sqlQuery("
+        SELECT *
+        FROM prescriptions_schedule
+        WHERE schedule_id = ?
+          AND active = 1
+          AND status = 'Active'
+    ", [$schedule_id]);
+
+    if (!$schedule) {
+        return false;
+    }
+
+    // 2️⃣ Validaciones básicas
+    if (empty($schedule['start_date']) ||
+        empty($schedule['unit_frequency']) ||
+        empty($schedule['time_frequency'])) {
+        return false;
+    }
 
     $patient_id = $schedule['patient_id'];
     $start_date = new DateTime($schedule['start_date']);
-    $unit_frequency = (int)$schedule['unit_frequency']; // Ejemplo: 12
-    $time_frequency = $schedule['time_frequency']; // Ejemplo: 'hours'
-    $unit_duration = (int)$schedule['unit_duration']; // Ejemplo: 0
-    $time_duration = $schedule['time_duration']; // Ejemplo: ''
 
-    // Depuración de los valores
-    //debugLog("Unit Frequency: $unit_frequency");
-    //debugLog("Time Frequency: $time_frequency");
-    //debugLog("Unit Duration: $unit_duration");
-    //debugLog("Time Duration: $time_duration");
-
-    // Si no hay duration, establecer una duración predeterminada o manejar el error
-    if ($unit_duration <= 0 || empty($time_duration)) {
-        // Establecer una duración predeterminada (ejemplo: 24 horas)
-        $unit_duration = 1;
-        $time_duration = 'days';
-        //debugLog("No se definió la duración. Se usa la duración predeterminada: $unit_duration $time_duration.");
-    }
-
-    // Calcular end_date
-    $end_date = null;
-
+    // 3️⃣ Determinar end_date correctamente
     if (!empty($schedule['end_date'])) {
+
         $end_date = new DateTime($schedule['end_date']);
-    } else if ($unit_duration > 0 && !empty($time_duration)) {
-        // Calcular el end_date basado en la duración
-        $duration_interval = DateInterval::createFromDateString("{$unit_duration} {$time_duration}");
-        $end_date = clone $start_date; 
+
+    } elseif (!empty($schedule['unit_duration']) && !empty($schedule['time_duration'])) {
+
+        $duration_interval = DateInterval::createFromDateString(
+            $schedule['unit_duration'] . ' ' . $schedule['time_duration']
+        );
+
+        $end_date = clone $start_date;
         $end_date->add($duration_interval);
-        
-        // Depuración del end_date calculado
-        //debugLog("Calculated End Date: " . $end_date->format('Y-m-d H:i:s'));
+
     } else {
-        //debugLog("No se pudo calcular el end_date: unidad de duración o tiempo de duración no definidos.");
-        return;
+        return false; // No hay duración válida
     }
 
-    //debugLog("Start Date: " . $start_date->format('Y-m-d H:i:s'));
-    //debugLog("End Date: " . ($end_date ? $end_date->format('Y-m-d H:i:s') : 'No se pudo calcular.'));
-
-    // Crear el intervalo de repetición
-    if ($unit_frequency > 0) {
-        $frequency_interval = DateInterval::createFromDateString("$unit_frequency $time_frequency");
-    } else {
-        //debugLog("Frequency Interval no válido.");
-        return;
+    if ($end_date <= $start_date) {
+        return false;
     }
 
-    // Calcular el número máximo de repeticiones basado en la duración
-    $max_repetitions = null;
-    if ($end_date) {
-        // Calcular la duración total desde el start_date hasta el end_date en segundos
-        $total_duration_seconds = $end_date->getTimestamp() - $start_date->getTimestamp();
-        
-        // Convertir el intervalo de frecuencia a segundos
-        $frequency_seconds = 0;
-        switch ($time_frequency) {
-            case 'seconds':
-                $frequency_seconds = $unit_frequency;
-                break;
-            case 'minutes':
-                $frequency_seconds = $unit_frequency * 60;
-                break;
-            case 'hours':
-                $frequency_seconds = $unit_frequency * 3600;
-                break;
-            case 'days':
-                $frequency_seconds = $unit_frequency * 86400;
-                break;
-            case 'weeks':
-                $frequency_seconds = $unit_frequency * 604800;
-                break;
-            case 'months':
-                $frequency_seconds = $unit_frequency * 2592000; // Aproximadamente 30 días
-                break;
-        }
+    // 4️⃣ Crear intervalo real de frecuencia
+    $frequency_interval = DateInterval::createFromDateString(
+        $schedule['unit_frequency'] . ' ' . $schedule['time_frequency']
+    );
 
-        // Calcular el número de repeticiones
-        if ($frequency_seconds > 0) {
-            $max_repetitions = (int)($total_duration_seconds / $frequency_seconds);
-            //$max_repetitions = (int)($total_duration_seconds / $frequency_seconds) + 2; // +2 para incluir la primera y última dosis
-        }
-    } else {
-        // Si no hay end_date, usar un valor predeterminado
-        $max_repetitions = 1;  // Usar solo una dosis si no se puede calcular la duración
+    // 5️⃣ Cancelar supplies pendientes anteriores (anti-duplicado)
+    sqlStatement("
+        UPDATE prescriptions_supply
+        SET active = 0,
+            status = 'Cancelled',
+            modification_datetime = NOW(),
+            modified_by = ?
+        WHERE schedule_id = ?
+          AND status = 'Pending'
+    ", [$user_id, $schedule_id]);
+
+    // 6️⃣ Generar todas las fechas usando DatePeriod real
+    $dates = [];
+    $current = clone $start_date;
+
+    while ($current < $end_date) {
+        $dates[] = clone $current;
+        $current->add($frequency_interval);
     }
 
-    //debugLog("Max Repetitions Calculated: $max_repetitions");
-
-    // Crear el periodo de repeticiones
-    if ($max_repetitions > 0) {
-        $period = new DatePeriod($start_date, $frequency_interval, $max_repetitions - 1);  // Ajuste para que incluya la primera y última dosis
-    } else {
-        //debugLog("No hay repeticiones válidas.");
-        return;
+    if (empty($dates)) {
+        return false;
     }
-    $user_id = $_SESSION['authUserID']; // Obtener el ID del usuario
-    // Iterar por el periodo definido
-    $dose_number = 1;  // Inicializar el número de dosis
-    foreach ($period as $current_date) {
-        // Calcular las alarmas antes de la administración (opcional)
+
+    $max_dose = count($dates);
+    $dose_number = 1;
+
+    // 7️⃣ Insertar supplies
+    foreach ($dates as $dose_datetime) {
+
         $alarm1_datetime = null;
+        $alarm1_active = 0;
+
         if (!empty($schedule['alarm1_unit']) && !empty($schedule['alarm1_time'])) {
-            $alarm1_interval = DateInterval::createFromDateString("{$schedule['alarm1_unit']} {$schedule['alarm1_time']}");
-            $alarm1_datetime = clone $current_date;
-            $alarm1_datetime->sub($alarm1_interval);  // Restar la alarma del tiempo actual
+            $alarm_interval = DateInterval::createFromDateString(
+                $schedule['alarm1_unit'] . ' ' . $schedule['alarm1_time']
+            );
+            $alarm1_datetime = clone $dose_datetime;
+            $alarm1_datetime->sub($alarm_interval);
+            $alarm1_active = 1;
         }
 
         $alarm2_datetime = null;
+        $alarm2_active = 0;
+
         if (!empty($schedule['alarm2_unit']) && !empty($schedule['alarm2_time'])) {
-            $alarm2_interval = DateInterval::createFromDateString("{$schedule['alarm2_unit']} {$schedule['alarm2_time']}");
-            $alarm2_datetime = clone $current_date;
-            $alarm2_datetime->sub($alarm2_interval);  // Restar la alarma del tiempo actual
+            $alarm_interval = DateInterval::createFromDateString(
+                $schedule['alarm2_unit'] . ' ' . $schedule['alarm2_time']
+            );
+            $alarm2_datetime = clone $dose_datetime;
+            $alarm2_datetime->sub($alarm_interval);
+            $alarm2_active = 1;
         }
 
-        // Insertar el suministro en prescriptions_supply
-        handlePrescriptionSupply($schedule_id, $patient_id, $dose_number, $max_repetitions, $current_date, $alarm1_datetime, $alarm2_datetime, $user_id);
-        $dose_number++;  // Incrementar el número de dosis
+        sqlStatement("
+            INSERT INTO prescriptions_supply (
+                schedule_id,
+                patient_id,
+                dose_number,
+                max_dose,
+                schedule_datetime,
+                alarm1_datetime,
+                alarm1_active,
+                alarm2_datetime,
+                alarm2_active,
+                status,
+                created_by,
+                creation_datetime,
+                active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, NOW(), 1)
+        ", [
+            $schedule_id,
+            $patient_id,
+            $dose_number,
+            $max_dose,
+            $dose_datetime->format('Y-m-d H:i:s'),
+            $alarm1_datetime ? $alarm1_datetime->format('Y-m-d H:i:s') : null,
+            $alarm1_active,
+            $alarm2_datetime ? $alarm2_datetime->format('Y-m-d H:i:s') : null,
+            $alarm2_active,
+            $user_id
+        ]);
+
+        $dose_number++;
     }
+
+    return true;
 }
+
 function deactivatePreviousSchedule($schedule_id, $user_id) {
     $deactivate_query = "UPDATE prescriptions_schedule 
                          SET active = 0, 
@@ -976,7 +984,6 @@ function handlePrescriptionSupply($schedule_id, $patient_id, $dose_number, $max_
     }
     // Nota: No usar echo aquí, ya que esta función puede ser llamada desde APIs que retornan JSON
 }
-
 function getDoseDetails($supply_id) {
     if (!$supply_id) {
         die(xlt('No supply ID provided.'));

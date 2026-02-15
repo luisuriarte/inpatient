@@ -142,6 +142,36 @@ $row = sqlFetchArray($result);
                             </div>
                         </div>
                         <p> </p>
+                        <hr>
+
+                    <!-- PRN -->
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="prnCheck">
+                            <label class="custom-control-label font-weight-bold" for="prnCheck">
+                                <?php echo xlt('PRN (As Needed)'); ?>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="prnFields" style="display:none;">
+                        <div class="form-group">
+                            <label for="prn_reason"><?php echo xlt('Reason / Indication for PRN'); ?></label>
+                            <input type="text" class="form-control" name="prn" id="prn_reason"
+                                placeholder="<?php echo xlt('Example: Pain, Fever >38°C, Nausea'); ?>">
+                        </div>
+                    </div>
+                    <!-- STAT -->
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" 
+                                name="priority_stat" value="1" id="statCheck">
+                            <label class="custom-control-label font-weight-bold text-danger" for="statCheck">
+                                <?php echo xlt('STAT (Immediate)'); ?>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <!-- Field: Intravenous Switch -->
                         <div class="form-group d-flex align-items-center">
@@ -260,13 +290,6 @@ $row = sqlFetchArray($result);
                         <input type="hidden" class="form-control" name="iv_status" value="Active" id="iv_status">
                     </div>
                     <p> </p>
-                    <!-- Field: Scheduled -->
-                    <div class="form-group d-flex align-items-center">
-                        <div class="custom-slider-switch ml-3">
-                            <input type="checkbox" name="scheduled" id="scheduledSwitch" value="1" autocomplete="off">
-                        </div>
-                        <label class="mb-0" style="font-weight: bold;"><?php echo xlt('Scheduled'); ?></label>
-                    </div>
 
                     <!-- Repeat medication fields (only visible if One-time Medication is No) -->
                     <div id="repeatFields" style="background-color: #e0e1fb; border-top: 1px solid #dee2e6;">
@@ -406,59 +429,69 @@ $row = sqlFetchArray($result);
         });
     var searchUsersUrl = "<?php echo $GLOBALS['webroot']; ?>/inpatient/search_users.php";
 
-    $(document).ready(function() {
-        // Inicializar visibilidad de campos de repetición y intravenosos según los switches
-        toggleRepeatFields();  
+$(document).ready(function() {
+
+    togglePRNFields();
+    toggleIntravenousFields();
+    toggleNotificationFields();
+    toggleRepeatFields();
+
+    $('#prnCheck').on('change', function() {
+        togglePRNFields();
+        toggleRepeatFields();
+    });
+
+    $('#intravenousSwitch').on('change', function() {
         toggleIntravenousFields();
-        toggleNotificationFields();   
-
-        // Escuchar cambios en los switches y alternar la visibilidad de los campos
-        $('#scheduledSwitch').on('change', function() {
-            toggleRepeatFields();  
-        });
-
-        $('#intravenousSwitch').on('change', function() {
-            toggleIntravenousFields();  
-        });
-
-        $('#notificationSwitch').on('change', function() {
-            toggleNotificationFields();  
-        });
     });
 
-    // Función para alternar la visibilidad de los campos de repetición
-    function toggleRepeatFields() {
-        if ($('#scheduledSwitch').is(':checked')) {
-            $('#repeatFields').show();  
-        } else {
-            $('#repeatFields').hide();  
-        }
-    }
-
-    // Función para alternar la visibilidad de los campos intravenosos
-    function toggleIntravenousFields() {
-        if ($('#intravenousSwitch').is(':checked')) {
-            $('#intravenousFields').show();  
-        } else {
-            $('#intravenousFields').hide();  
-        }
-    }
-    // Función para alternar la visibilidad de los campos alarmas
-    function toggleNotificationFields() {
-        if ($('#notificationSwitch').is(':checked')) {
-            $('#notificationFields').show();  
-        } else {
-            $('#notificationFields').hide();  
-        }
-    }
-
-    $(document).ready(function() {
-        $('#route').change(function() {
-            // Obtener el `option_id` del atributo data-option-id
-            var selectedOptionId = $(this).find(':selected').data('option-id');
-            // Actualizar el campo oculto
-            $('#route_option_id').val(selectedOptionId);
-        });
+    $('#notificationSwitch').on('change', function() {
+        toggleNotificationFields();
     });
+
+    $('#unit_frequency').on('input', function() {
+        toggleRepeatFields();
+    });
+
+});
+
+function togglePRNFields() {
+    if ($('#prnCheck').is(':checked')) {
+        $('#prnFields').show();
+    } else {
+        $('#prnFields').hide();
+        $('#prn_reason').val('');
+    }
+}
+
+function toggleRepeatFields() {
+
+    if ($('#prnCheck').is(':checked')) {
+        $('#repeatFields').hide();
+        return;
+    }
+
+    if ($('#unit_frequency').val() > 0) {
+        $('#repeatFields').show();
+    } else {
+        $('#repeatFields').hide();
+    }
+}
+
+function toggleIntravenousFields() {
+    if ($('#intravenousSwitch').is(':checked')) {
+        $('#intravenousFields').show();
+    } else {
+        $('#intravenousFields').hide();
+    }
+}
+
+function toggleNotificationFields() {
+    if ($('#notificationSwitch').is(':checked')) {
+        $('#notificationFields').show();
+    } else {
+        $('#notificationFields').hide();
+    }
+}
 
 </script>

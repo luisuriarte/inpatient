@@ -199,6 +199,9 @@ CREATE TABLE `prescriptions_intravenous` (
   CONSTRAINT `fk_iv_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `prescriptions_schedule` (`schedule_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=94 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+ALTER TABLE prescriptions
+ADD COLUMN priority ENUM('routine','stat','urgent') DEFAULT 'routine';
+
 CREATE TABLE `beds_patients_tracker` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `uuid` binary(64) DEFAULT NULL,

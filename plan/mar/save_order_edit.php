@@ -24,7 +24,11 @@ $form = $_POST['form'] ?? '';
 $route = $_POST['route'] ?? '';
 $note = $_POST['note'] ?? '';
 $intravenous = isset($_POST['intravenous_switch']) ? 1 : 0;
-$scheduled = isset($_POST['scheduled']) ? 1 : 0;
+$order_type = $_POST['order_type'] ?? 'scheduled';
+$allowed_types = ['scheduled', 'unique', 'prn', 'stat'];
+if (!in_array($order_type, $allowed_types)) {
+    $order_type = 'scheduled';
+}
 $notifications = isset($_POST['notifications']) ? 1 : 0;
 $medications_list = isset($_POST['add_medications']) ? 1 : 0;
 $unit_frequency = $_POST['unit_frequency'] ?? null;
@@ -111,7 +115,7 @@ sqlStatement("
     SET active = 0,
         status = 'Modified',
         modification_reason = ?,
-        modifed_by = ?,
+        modified_by = ?,
         modification_datetime = NOW()
     WHERE schedule_id = ?
 ", [
@@ -121,11 +125,23 @@ sqlStatement("
 ]);
 
     // 3. Insertar nuevo schedule con versión incrementada
+    if ($order_type === 'stat') {
+        $unit_frequency = null;
+        $time_frequency = null;
+        $unit_duration = null;
+        $time_duration = null;
+        $end_date_formatted = null;
+    }
+    if ($order_type === 'prn') {
+        $unit_frequency = null;
+        $time_frequency = null;
+    }
+
     $new_version = $previous_version + 1;
     
     $insert_schedule_query = "
         INSERT INTO prescriptions_schedule 
-        (prescription_id, patient_id, intravenous, scheduled, notifications, 
+        (prescription_id, patient_id, intravenous, order_type, notifications,
          start_date, end_date, unit_frequency, time_frequency, unit_duration, time_duration,
          alarm1_unit, alarm1_time, alarm2_unit, alarm2_time, status,
          version, previous_schedule_id, root_schedule_id, active)
@@ -136,7 +152,7 @@ sqlStatement("
             $new_prescription_id,
             $patient_id,
             $intravenous,
-            $scheduled,
+            $order_type,
             $notifications,
             $start_date_formatted,
             $end_date_formatted,
@@ -233,32 +249,44 @@ sqlStatement("
             modification_datetime = NOW(),
             active = 0
         WHERE schedule_id = ? 
-        AND status = 'Pending'
+        AND status = 'Pending' AND active = 1
     ";
     
     sqlStatement($cancel_supplies_query, [$userId, $current_schedule_id]);
 
-    // 6. Generar nuevos supplies para el nuevo schedule
-    if ($scheduled == 0) {
-        // Dosis única
-        $insert_single_query = "
-            INSERT INTO prescriptions_supply 
-            (schedule_id, patient_id, schedule_datetime, dose_number, max_dose, status, active, created_by, creation_datetime)
-            VALUES (?, ?, ?, 1, 1, 'Pending', 1, ?, NOW())
-        ";
-        
-        sqlStatement($insert_single_query, [
-            $new_schedule_id, $patient_id, $start_date_formatted, $userId
-        ]);
-    } else {
-        // Generar supplies programados usando la función existente
-        createPrescriptionsSupply($new_schedule_id);
+    // 6. Generar nuevos supplies para el nuevo tipo de orden
+    switch ($order_type) {
+
+        case 'unique':
+        case 'stat':
+            // Solo una dosis inmediata
+            sqlStatement("
+                INSERT INTO prescriptions_supply
+                (schedule_id, patient_id, schedule_datetime, dose_number, max_dose,
+                status, active, created_by, creation_datetime)
+                VALUES (?, ?, ?, 1, 1, 'Pending', 1, ?, NOW())
+            ", [
+                $new_schedule_id,
+                $patient_id,
+                $start_date_formatted,
+                $userId
+            ]);
+            break;
+
+        case 'scheduled':
+            createPrescriptionsSupply($new_schedule_id);
+            break;
+
+        case 'prn':
+            // PRN no genera automáticamente supplies
+            // Se generarán cuando enfermería registre administración
+            break;
     }
 
     // 7. Manejar lists y lists_medication
     if ($medications_list == 1) {
         $medication_description = $dosage . ' ' . xlt('dose');
-        if ($scheduled == 1 && $unit_frequency && $time_frequency) {
+        if ($order_type == 'scheduled' && $unit_frequency && $time_frequency) {
             $medication_description .= ' ' . xlt('Every') . ' ' . $unit_frequency . ' ' . xlt($time_frequency);
         }
         

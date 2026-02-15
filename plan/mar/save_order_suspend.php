@@ -46,11 +46,12 @@ try {
     $update_schedule_query = "
         UPDATE prescriptions_schedule 
         SET active = 0,
+            status = 'Suspended',
             suspended_reason = ?,
             suspended_by = ?,
             suspension_datetime = ?
         WHERE schedule_id = ?
-          AND active = 1
+        AND active = 1
     ";
     
     sqlStatement($update_schedule_query, [
@@ -60,6 +61,34 @@ try {
         $schedule_id
     ]);
     
+    // 1.1 Suspender IV activo asociado
+    sqlStatement("
+        UPDATE prescriptions_intravenous
+        SET active = 0,
+            status = 'Suspended',
+            modified_by = ?,
+            modification_datetime = ?
+        WHERE schedule_id = ?
+        AND active = 1
+    ", [
+        $user_id,
+        $current_datetime,
+        $schedule_id
+    ]); 
+    
+    $affected_schedule = $database->Affected_Rows();
+
+    if ($affected_schedule == 0) {
+        $database->FailTrans();
+        $database->CompleteTrans();
+
+        echo json_encode([
+            'success' => false,
+            'message' => xl('Order already suspended or inactive')
+        ]);
+        exit;
+    }
+
     // 2. Suspender supplies pendientes futuros y desactivar alarmas
     $update_supply_query = "
         UPDATE prescriptions_supply 
@@ -70,7 +99,7 @@ try {
             alarm2_active = 0
         WHERE schedule_id = ?
           AND status = 'Pending'
-          AND schedule_datetime >= NOW()
+          -- AND schedule_datetime >= NOW() -- Comentado para suspender todas las dosis pendientes
     ";
     
     $result = $database->Execute($update_supply_query, [

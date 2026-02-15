@@ -103,9 +103,11 @@ try {
 
     // 2. Insertar el cronograma en la tabla prescriptions_schedule
     $schedule_query = "INSERT INTO prescriptions_schedule 
-                    (prescription_id, patient_id, intravenous, scheduled, notifications, start_date, end_date, unit_frequency, 
-                        time_frequency, unit_duration, time_duration, alarm1_unit, alarm1_time, alarm2_unit, alarm2_time, `status`)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')";
+    (prescription_id, patient_id, intravenous, scheduled, notifications, start_date, end_date,
+    unit_frequency, time_frequency, unit_duration, time_duration,
+    alarm1_unit, alarm1_time, alarm2_unit, alarm2_time,
+    status, version, active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', 1, 1)";
 
     $schedule_id = sqlInsert($schedule_query, 
                 array(
@@ -134,12 +136,17 @@ try {
     );
 
     // Graba Intravenoso
-    if ($intravenous == 1) {                    
-        $insertQuery = "INSERT INTO prescriptions_intravenous (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate, iv_route, total_volume, concentration, concentration_units, iv_duration, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    if ($intravenous == 1) {
 
-        $insertResult = sqlStatement($insertQuery, 
-        [
+        $iv_insert = "
+            INSERT INTO prescriptions_intravenous
+            (prescription_id, schedule_id, vehicle, catheter_type, infusion_rate,
+            iv_route, total_volume, concentration, concentration_units, iv_duration,
+            status, version, root_intravenous_id, active, created_by, creation_datetime)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', 1, NULL, 1, ?, NOW())
+        ";
+
+        $iv_id = sqlInsert($iv_insert, [
             $prescription_id,
             $schedule_id,
             $vehicle,
@@ -150,11 +157,17 @@ try {
             $concentration,
             $concentration_units,
             $iv_duration,
-            $iv_status
-        ]
-        );
+            $userId
+        ]);
+
+        // Inicializar root_intravenous_id
+        sqlStatement("
+            UPDATE prescriptions_intravenous
+            SET root_intravenous_id = ?
+            WHERE intravenous_id = ?
+        ", [$iv_id, $iv_id]);
     }
-    
+
     // Formatea el la frecuencia de dosaje, para agregar a prescriptions
     $med_query = "
         SELECT p.drug, p.size, p.dosage, ps.unit_frequency, ps.time_frequency, ps.scheduled,
@@ -193,7 +206,7 @@ try {
             $drug,
             $start_date_formatted,
             $end_date_formatted,
-            $notes,
+            $note,
             $patient_id,
             $userName
         ));
@@ -223,9 +236,13 @@ try {
         ]
         );
     }
+ 
+    } else {
 
-    // Llenar la tabla prescriptions_supply con las administraciones programadas
-    createPrescriptionsSupply($schedule_id);
+        // Llenar la tabla prescriptions_supply con las administraciones programadas
+        createPrescriptionsSupply($schedule_id);
+
+    }
 
     // Commit de la transacción si todo salió bien
     $database->CompleteTrans();
